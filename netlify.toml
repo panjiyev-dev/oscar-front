@@ -1,0 +1,8 @@
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # Agar ilova ichida "iframe" ishlatmayotgan bo'lsangiz, bu ixtiyoriy, lekin qo'shish xalaqit bermaydi.
+    # X-Frame-Options = "DENY"
+
+    # Bu asosiy CSP! Xavfsizlikni saqlagan holda Mini App API'ga ulanishga ruxsat beradi.
+    Content-Security-Policy = "default-src 'self' https://telegram.org; script-src 'self' 'unsafe-inline' https://telegram.org; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.telegram.org; img-src 'self' data: https:;"
