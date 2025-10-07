@@ -5,12 +5,12 @@ import { getFirestore } from "firebase/firestore";
 
 // 2. O'zingizning ma'lumotlaringiz bilan almashtiring
 const firebaseConfig = {
-  apiKey: "AIzaSyA295To8ip0bmjREUJI6sHTat-J8IoCbEA",
-  authDomain: "oscar-d85af.firebaseapp.com",
-  projectId: "oscar-d85af",
-  storageBucket: "oscar-d85af.firebasestorage.app",
-  messagingSenderId: "959169393757",
-  appId: "1:959169393757:web:1972ea6b08b8eddf2549b4"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
 // Firebase ni ishga tushirish
