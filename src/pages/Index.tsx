@@ -47,10 +47,10 @@ const Index = () => {
       setProducts(allProducts);
       setCategories(firebaseCategories);
       
-      // Eng ko'p chegirmali mahsulotlarni topish
-      const sortedProducts = [...allProducts].sort(
-        (a, b) => b.discount - a.discount
-      );
+      // Eng ko'p chegirmali mahsulotlarni topish va stock > 0 bo'lganlarini filtrlash
+      const sortedProducts = [...allProducts]
+        .filter(p => p.stock > 0)  // Qolmagan mahsulotlarni chiqarib tashlash
+        .sort((a, b) => b.discount - a.discount);
       setHighestDiscountProducts(sortedProducts.slice(0, 4));
     }
   }, [allProducts, firebaseCategories]);

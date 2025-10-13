@@ -6,38 +6,49 @@ import { Grid3X3, Tag, ShoppingCart, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useProductsQuery } from "@/hooks/use-products";  // Qo'shildi: products uchun
 
 export function MobileNavigation() {
   const location = useLocation();
   const navigate = useNavigate();
   const [cartCount, setCartCount] = useState(0);
 
+  const { data: productsArray } = useProductsQuery();  // Products yuklash
+
   // useEffect yordamida cookiesdagi savat holatini kuzatish
   useEffect(() => {
     const updateCartCount = () => {
       let count = 0;
       const cookies = Cookies.get();
+      if (!productsArray) return;  // Products yuklanmagan bo'lsa, 0
+
       for (const cookieName in cookies) {
         if (cookieName.startsWith('cart_')) {
-          count += parseInt(cookies[cookieName], 10);
+          try {
+            const productId = parseInt(cookieName.replace('cart_', ''));
+            const { box, piece } = JSON.parse(cookies[cookieName]);
+            const product = productsArray.find(p => p.id === productId);
+            if (product) {
+              count += (box || 0) * (product.boxCapacity || 1) + (piece || 0);
+            }
+          } catch {
+            // Invalid cookie, ignore
+          }
         }
       }
       setCartCount(count);
     };
 
-    // Sahifa yuklanganda va keyinchalik vaqtinchalik ma'lumotlarni yangilash
     updateCartCount();
 
-    // Har 500ms (yoki kerakli intervalda) savat holatini tekshirish
+    // Har 500ms da yangilash
     const interval = setInterval(updateCartCount, 500);
 
-    // Komponent o'chirilganda intervalni to'xtatish
     return () => clearInterval(interval);
-  }, []);
+  }, [productsArray]);  // productsArray ga bog'lash
 
   const isActive = (path: string) => location.pathname === path;
 
-  // Savat belgisidagi matnni aniqlash
   const badgeText = cartCount > 99 ? '99+' : String(cartCount);
 
   const navigationItems = [

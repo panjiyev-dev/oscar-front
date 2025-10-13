@@ -3,7 +3,6 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 
-// 2. O'zingizning ma'lumotlaringiz bilan almashtiring
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -13,19 +12,20 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
-// Firebase ni ishga tushirish
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 
-// Mahsulot va Kategoriya turlarini belgilash
 export interface Product {
   id: number;
   name: string;
-  price: number;
+  priceBox: number;    // Yangi: Karobka narxi
+  pricePiece: number;  // Yangi: Dona narxi
   discount: number;
   category: string;
   image: string;
   description: string;
+  boxCapacity: number;
+  stock: number;       // Jami dona
 }
 
 export interface Category {
@@ -33,4 +33,8 @@ export interface Category {
   name: string;
   icon: string;
   color: string;
+}
+
+export interface UsdRate {
+  rate: number;  // UZS per USD
 }
