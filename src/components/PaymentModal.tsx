@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -160,8 +162,8 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
     // So'ralgan o'zgartirish: modal yopilgandan so'ng sahifani yangilash
     setTimeout(() => {
       onClose();
-      // Sahifani yangilash (refresh)
-      window.location.reload(); 
+      // Bosh sahifaga o'tish (redirect)
+      window.location.href = '/'; 
     }, 3000);
   };
 
