@@ -18,8 +18,13 @@ import "react-phone-input-2/lib/style.css";  // CSS import
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";  // npm install react-leaflet leaflet
 import { icon } from "leaflet";  // Leaflet icon
 
+import * as maptilersdk from "@maptiler/sdk";
+import "@maptiler/sdk/dist/maptiler-sdk.css";
+import { useEffect, useRef } from "react";
+
 const TELEGRAM_BOT_TOKEN = '7586941333:AAHKly13Z3M5qkyKjP-6x-thWvXdJudIHsU';
 const ADMIN_CHAT_ID = 7122472578;
+maptilersdk.config.apiKey = "rxgVPHLIFJxhm7R2mcY8";
 
 interface CartItem extends Product {
   boxQuantity: number;
@@ -319,7 +324,7 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
         </div>
       </DialogContent>
       {/* Map Modal (yangi dialog yoki conditional render) */}
-      {showMap && (
+      {/* {showMap && (
         <Dialog open={showMap} onOpenChange={setShowMap}>
           <DialogContent className="max-w-2xl max-h-[70vh]">
             <DialogHeader>
@@ -340,7 +345,68 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
             </div>
           </DialogContent>
         </Dialog>
+      )} */}
+
+      {showMap && (
+        <Dialog open={showMap} onOpenChange={setShowMap}>
+          <DialogContent className="max-w-2xl max-h-[70vh]">
+            <DialogHeader>
+              <DialogTitle>Xaritadan manzil tanlang</DialogTitle>
+            </DialogHeader>
+
+            <div style={{ height: "400px", width: "100%" }}>
+              <MapTilerMap location={location} setLocation={setLocation} />
+            </div>
+
+            <div className="pt-4 space-y-2">
+              <Button onClick={() => setShowMap(false)} className="w-full">
+                Tanlashni saqlash va yopish
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
     </Dialog>
   );
+}
+
+function MapTilerMap({ location, setLocation }) {
+  const mapRef = useRef(null);
+  const markerRef = useRef(null);
+
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    // Xarita yaratish
+    const map = new maptilersdk.Map({
+      container: mapRef.current,
+      style: maptilersdk.MapStyle.STREETS, // yoki SATELLITE, OUTDOOR
+      center: [69.2401, 41.2995],
+      zoom: 12,
+    });
+
+    // Marker yaratish
+    const marker = new maptilersdk.Marker()
+      .setLngLat([69.2401, 41.2995])
+      .addTo(map);
+    markerRef.current = marker;
+
+    // Xarita bosilganda marker joyini yangilash
+    map.on("click", (e) => {
+      const lat = e.lngLat.lat;
+      const lng = e.lngLat.lng;
+      marker.setLngLat([lng, lat]);
+      setLocation({
+        lat,
+        lng,
+        address: `${lat.toFixed(6)}, ${lng.toFixed(6)}`
+      });
+    });
+
+    return () => {
+      map.remove();
+    };
+  }, []);
+
+  return <div ref={mapRef} style={{ height: "100%", width: "100%", borderRadius: "8px" }} />;
 }
