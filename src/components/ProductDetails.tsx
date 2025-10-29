@@ -37,6 +37,10 @@ const ProductDetails = ({ productId }: ProductDetailsProps) => {
   }, [allProducts, productId]);
 
   useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, []);
+
+  useEffect(() => {
     const saved = Cookies.get(cookieKey);
     if (saved && product) {
       try {

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -297,6 +297,29 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
   const [street, setStreet] = useState<string>("");
   const [house, setHouse] = useState<string>("");
   const { toast } = useToast();
+  // Klaviatura yopilganda tugma animatsiyasi uchun state
+  const [showBounce, setShowBounce] = useState(false);
+  const isFormComplete = useMemo(() => {
+    return userName.trim() && userPhone.length >= 9 && selectedRegion && selectedDistrict && street.trim() && house.trim();
+  }, [userName, userPhone, selectedRegion, selectedDistrict, street, house]);
+
+  // Klaviatura yopilishini detect qilish uchun resize event
+  useEffect(() => {
+    if (step !== 'userInfo') return;
+    const handleResize = () => {
+      if (isFormComplete && !isProcessing) {
+        setShowBounce(true);
+        // Bir necha soniya keyin animatsiyani to'xtatish
+        const timer = setTimeout(() => setShowBounce(false), 3000);
+        return () => clearTimeout(timer);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    // Dastlabki tekshirish
+    handleResize();
+    return () => window.removeEventListener('resize', handleResize);
+  }, [step, isFormComplete, isProcessing]);
+
   // --- Calculations ---
   const totalAmountUZS = cartItems.reduce((sum, item) => {
     const boxAmount = item.boxQuantity * item.priceBox;
@@ -390,6 +413,7 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
         return;
     }
     setIsProcessing(true);
+    setShowBounce(false); // Animatsiyani to'xtat
     try {
       await updateStockInFirebase();
       await sendOrderToAdmin();
@@ -426,25 +450,25 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
   // --- Render: Main Modal ---
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto sm:max-w-lg overflow-x-hidden">
         <DialogHeader>
           <DialogTitle>{step === 'method' ? 'To\'lov usulini tanlang' : 'Buyurtma ma\'lumotlari'}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
+        <div className="space-y-4 overflow-x-hidden">
           {step === 'method' ? (
             <>
-              {/* Order summary */}
-              <div className="space-y-2 max-h-32 overflow-y-auto border p-2 rounded-md">
-                <h3 className="font-semibold text-sm sticky top-0 bg-white/90">Savatdagi mahsulotlar:</h3>
+              {/* Order summary - horizontal scroll oldini olish uchun overflow-x-hidden qo'shildi */}
+              <div className="space-y-2 max-h-32 overflow-y-auto border p-3 rounded-md bg-gray-50 overflow-x-hidden">
+                <h3 className="font-semibold text-sm sticky top-0 bg-gray-50/90 p-2 border-b">Savatdagi mahsulotlar:</h3>
                 {cartItems.map((item) => {
                   const boxAmount = item.boxQuantity * item.priceBox;
                   const pieceAmount = item.pieceQuantity * item.pricePiece * (1 - (item.discount || 0) / 100);
                   const itemTotal = Math.round(boxAmount + pieceAmount);
                   return (
-                    <div key={item.id} className="flex justify-between items-center py-1 border-b last:border-b-0">
-                      <span className="text-sm truncate flex-1 mr-2">{item.name} ({item.boxQuantity} karobka, {item.pieceQuantity} dona)</span>
-                      <div className="text-right min-w-[80px]">
-                        <div className="font-medium text-sm">{itemTotal.toLocaleString()} so'm</div>
+                    <div key={item.id} className="flex justify-between items-center py-2 border-b last:border-b-0 text-xs overflow-x-hidden">
+                      <span className="truncate flex-1 mr-2 line-clamp-1">{item.name} ({item.boxQuantity} karobka, {item.pieceQuantity} dona)</span>
+                      <div className="text-right min-w-[70px]">
+                        <div className="font-medium">{itemTotal.toLocaleString()} so'm</div>
                       </div>
                     </div>
                   );
@@ -459,27 +483,36 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
                 </div>
               </div>
               {/* Payment methods */}
-              <div>
-                <h3 className="font-semibold mb-3">To'lov usuli:</h3>
-                <div className="grid grid-cols-2 gap-2">
+              <div className="overflow-x-hidden">
+                <h3 className="font-semibold mb-4 text-sm">To'lov usuli:</h3>
+                <div className="grid grid-cols-2 gap-3">
                   {paymentMethods.map((method) => (
                     <Button
                       key={method.id}
                       variant={paymentMethod === method.id ? "default" : "outline"}
-                      // Dinamik rang ishlatish
-                      className={`h-12 justify-start gap-2 ${paymentMethod === method.id ? method.color : "border-gray-300"}`}
+                      // Dinamik rang ishlatish va mobil uchun kattalashtirish
+                      className={`h-14 justify-start gap-3 p-3 text-sm font-semibold shadow-sm hover:shadow-md transition-all active:scale-95 ${
+                        paymentMethod === method.id ? method.color : "border-gray-300"
+                      }`}
                       onClick={() => setPaymentMethod(method.id)}
+                      onTouchStart={() => setPaymentMethod(method.id)} // Mobil touch uchun qo'shimcha
                     >
-                      <method.icon className="h-4 w-4" />
-                      <span className="text-xs font-semibold">{method.name}</span>
+                      <method.icon className="h-5 w-5 flex-shrink-0" />
+                      <span>{method.name}</span>
                     </Button>
                   ))}
                 </div>
+                {paymentMethod && (
+                  <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
+                    <CheckCircle className="h-3 w-3" />
+                    {paymentMethod.toUpperCase()} tanlandi
+                  </p>
+                )}
               </div>
               <Button
                 onClick={handlePayment}
                 disabled={isProcessing || !paymentMethod}
-                className="w-full h-12 text-lg"
+                className="w-full h-14 text-lg font-semibold shadow-sm hover:shadow-md transition-all active:scale-95"
               >
                 {isProcessing ? "Kutib tur..." : 'Davom etish'}
               </Button>
@@ -487,8 +520,8 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
           ) : (
             <>
               {/* User info form */}
-              <div className="space-y-4">
-                <div className="space-y-1">
+              <div className="space-y-4 overflow-x-hidden">
+                <div className="space-y-2">
                   <label className="text-sm font-medium flex items-center gap-2">
                     <User className="h-4 w-4 text-gray-500" />
                     Ism va familiya
@@ -497,10 +530,10 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
                     value={userName}
                     onChange={(e) => setUserName(e.target.value)}
                     placeholder="Ism Familiya"
-                    className="h-10"
+                    className="h-12 text-sm"
                   />
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-2">
                   <label className="text-sm font-medium flex items-center gap-2">
                     <Phone className="h-4 w-4 text-gray-500" />
                     Telefon raqami
@@ -510,13 +543,13 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
                     value={userPhone}
                     onChange={(phone) => setUserPhone(phone)}
                     inputProps={{ name: 'phone', required: true }}
-                    // Ushbu stil PhoneInput'ni to'g'ri ko'rsatishga yordam beradi
-                    inputStyle={{ width: '100%', height: '40px', fontSize: '16px' }}
+                    // Mobil uchun optimallashtirish
+                    inputStyle={{ width: '100%', height: '48px', fontSize: '16px', padding: '0 12px' }}
                     containerStyle={{ marginBottom: 0 }}
-                    buttonStyle={{ padding: '0 8px' }}
+                    buttonStyle={{ padding: '0 8px', height: '48px' }}
                   />
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-2">
                   <label className="text-sm font-medium flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-gray-500" />
                     Yetkazib berish manzili
@@ -530,7 +563,7 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
                         setSelectedRegion(e.target.value);
                         setSelectedDistrict(""); // Tuman tozalanadi
                       }}
-                      className="w-full h-10 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full h-12 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white"
                     >
                       <option value="">Viloyatni tanlang</option>
                       {regions.map((region) => (
@@ -547,7 +580,7 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
                       value={selectedDistrict}
                       onChange={(e) => setSelectedDistrict(e.target.value)}
                       disabled={!selectedRegion}
-                      className="w-full h-10 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                      className="w-full h-12 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 text-sm bg-white"
                     >
                       <option value="">Tumanni tanlang</option>
                       {districts.map((district) => (
@@ -564,7 +597,7 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
                       value={street}
                       onChange={(e) => setStreet(e.target.value)}
                       placeholder="Kocha nomini yozing"
-                      className="h-10"
+                      className="h-12 text-sm"
                     />
                   </div>
                   {/* Uy raqami */}
@@ -574,7 +607,7 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
                       value={house}
                       onChange={(e) => setHouse(e.target.value)}
                       placeholder="Uy raqamini yozing"
-                      className="h-10"
+                      className="h-12 text-sm"
                     />
                   </div>
                   {selectedRegion && selectedDistrict && street && house && (
@@ -586,19 +619,21 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
                 </div>
               </div>
               {/* Summary and Actions */}
-              <div className="pt-4 border-t space-y-2">
-                <div className="flex justify-between text-sm text-gray-500">
+              <div className="pt-4 border-t space-y-3 overflow-x-hidden">
+                <div className="flex justify-between text-sm text-gray-500 bg-gray-50 p-3 rounded-md">
                   <span>Jami: {totalAmountUZS.toLocaleString()} so'm</span>
                   <span>To'lov: {paymentMethod.toUpperCase()}</span>
                 </div>
                 <div className="space-y-2">
-                  <Button variant="outline" onClick={() => setStep('method')} className="w-full h-10">
+                  <Button variant="outline" onClick={() => setStep('method')} className="w-full h-12 text-sm active:scale-95">
                     Orqaga
                   </Button>
                   <Button
                     onClick={handleSubmitOrder}
-                    disabled={isProcessing || !userName.trim() || userPhone.length < 9 || !selectedRegion || !selectedDistrict || !street.trim() || !house.trim()}
-                    className="w-full h-10 bg-primary hover:bg-primary/90"
+                    disabled={isProcessing || !isFormComplete}
+                    className={`w-full h-12 bg-primary hover:bg-primary/90 text-sm font-semibold shadow-sm hover:shadow-md active:scale-95 disabled:opacity-50 transition-all ${
+                      showBounce && isFormComplete ? 'animate-bounce' : ''
+                    }`}
                   >
                     {isProcessing ? "Yuborilmoqda..." : 'Buyurtma berish'}
                   </Button>

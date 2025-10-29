@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Cookies from "js-cookie";
-import { Grid3X3, Tag, ShoppingCart, User } from "lucide-react";
+import { Grid3X3, Tag, ShoppingCart, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -55,7 +55,7 @@ export function MobileNavigation() {
     { path: "/", icon: Grid3X3, label: "Bosh sahifa" },
     { path: "/categories", icon: Tag, label: "Kategoriya" },
     { path: "/cart", icon: ShoppingCart, label: "Savat", badge: badgeText },
-    { path: "/profile", icon: User, label: "Profil" }
+    { path: "/map", icon: MapPin, label: "Joylashuvimiz" }
   ];
 
   return (

@@ -29,7 +29,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/categories" element={<Categories />} />
           <Route path="/cart" element={<Cart />} />
-          <Route path="/profile" element={<Profile />} />
+          <Route path="/map" element={<Profile />} />
           {/* Mahsulot sahifasi uchun yangi dinamik marshrut */}
           <Route path="/products/:id" element={<ProductDetailsWrapper />} />
           {/* Barcha maxsus marshrutlar shu yerdan yuqorida bo'lishi kerak */}
