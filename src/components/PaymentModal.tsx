@@ -266,7 +266,6 @@ const administrativeDivisions = {
     }
   }
 };
-
 // --- Types/Interfaces ---
 interface CartItem extends Product {
   boxQuantity: number;
@@ -290,9 +289,9 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
   const [paymentMethod, setPaymentMethod] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [userName, setUserName] = useState("");
-  const [userPhone, setUserPhone] = useState("");
+  const [userPhone, setUserPhone] = useState(""); // Formatted phone with spaces
   // Location state'lar
-  const [selectedRegion, setSelectedRegion] = useState<string>("");
+  const [selectedRegion, setSelectedRegion] = useState<string>("Toshkent shahri");
   const [selectedDistrict, setSelectedDistrict] = useState<string>("");
   const [street, setStreet] = useState<string>("");
   const [house, setHouse] = useState<string>("");
@@ -300,9 +299,9 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
   // Klaviatura yopilganda tugma animatsiyasi uchun state
   const [showBounce, setShowBounce] = useState(false);
   const isFormComplete = useMemo(() => {
-    return userName.trim() && userPhone.length >= 9 && selectedRegion && selectedDistrict && street.trim() && house.trim();
+    const rawPhone = userPhone.replace(/\D/g, '');
+    return userName.trim() && rawPhone.length === 9 && selectedRegion && selectedDistrict && street.trim() && house.trim();
   }, [userName, userPhone, selectedRegion, selectedDistrict, street, house]);
-
   // Klaviatura yopilishini detect qilish uchun resize event
   useEffect(() => {
     if (step !== 'userInfo') return;
@@ -319,7 +318,6 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
     handleResize();
     return () => window.removeEventListener('resize', handleResize);
   }, [step, isFormComplete, isProcessing]);
-
   // --- Calculations ---
   const totalAmountUZS = cartItems.reduce((sum, item) => {
     const boxAmount = item.boxQuantity * item.priceBox;
@@ -367,15 +365,16 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
         const itemTotal = Math.round(boxAmount + pieceAmount);
         return `${item.name} (${item.boxQuantity} karobka + ${item.pieceQuantity} dona): ${itemTotal.toLocaleString()} so'm`;
       }).join('\n');
-      const locationDetails = selectedRegion && selectedDistrict ? 
-        `Viloyat: ${selectedRegion}, Tuman: ${selectedDistrict}, Kocha: ${street}, Uy: ${house}` : 
+      const locationDetails = selectedRegion && selectedDistrict ?
+        `Viloyat: ${selectedRegion}, Tuman: ${selectedDistrict}, Kocha: ${street}, Uy: ${house}` :
         'Manzil kiritilmagan';
-       
+      
+      const fullPhone = `+998 ${userPhone}`;
       const message = `🛒 *Yangi buyurtma qabul qilindi!*\n\n` +
                      `📝 *Mahsulotlar:*\n${orderItems}\n\n` +
                      `💰 *Jami:* ${totalAmountUZS.toLocaleString()} so'm (~${totalAmountUSD} $)\n` +
                      `👤 *Ism:* ${userName}\n` +
-                     `📞 *Telefon:* ${userPhone}\n` +
+                     `📞 *Telefon:* ${fullPhone}\n` +
                      `📍 *Manzil:* ${locationDetails}\n` +
                      `💳 *To'lov usuli:* ${paymentMethod.toUpperCase()}\n\n` +
                      `⏰ *Vaqt:* ${new Date().toLocaleString('uz-UZ')}`;
@@ -402,14 +401,28 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
     }
     setStep('userInfo');
   };
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value.replace(/\D/g, ''); // Faqat raqamlarni qabul qilish
+    value = value.slice(0, 9); // 9 ta chegaralash
+
+    // Format: XX XXX XX XX
+    let formatted = '';
+    if (value.length > 0) formatted = value.substring(0, 2);
+    if (value.length > 2) formatted += ' ' + value.substring(2, 5);
+    if (value.length > 5) formatted += ' ' + value.substring(5, 7);
+    if (value.length > 7) formatted += ' ' + value.substring(7, 9);
+
+    setUserPhone(formatted);
+  };
   const handleSubmitOrder = async () => {
     if (!userName.trim() || !userPhone.trim() || !selectedRegion || !selectedDistrict || !street.trim() || !house.trim()) {
       toast({ title: "Xato", description: "Barcha maydonlarni to'ldiring", variant: "destructive" });
       return;
     }
-    // Telefon raqami kamida 9 ta raqamdan iboratligini tekshirish (o'zbek raqamlari uchun)
-    if (userPhone.length < 9) {
-        toast({ title: "Xato", description: "Telefon raqami to'g'ri kiritilmagan", variant: "destructive" });
+    // Telefon raqami 9 ta raqamdan iboratligini tekshirish
+    const rawPhone = userPhone.replace(/\D/g, '');
+    if (rawPhone.length !== 9 || !/^\d{9}$/.test(rawPhone)) {
+        toast({ title: "Xato", description: "Telefon raqami to'g'ri kiritilmagan (9 ta raqam: 99 999 99 99)", variant: "destructive" });
         return;
     }
     setIsProcessing(true);
@@ -425,7 +438,7 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
     } finally {
       setIsProcessing(false);
     }
-   
+  
     // Modal yopilgandan so'ng sahifani yangilash
     setTimeout(() => {
       onClose();
@@ -538,16 +551,18 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
                     <Phone className="h-4 w-4 text-gray-500" />
                     Telefon raqami
                   </label>
-                  <PhoneInput
-                    country={'uz'} // O'zbekiston default
-                    value={userPhone}
-                    onChange={(phone) => setUserPhone(phone)}
-                    inputProps={{ name: 'phone', required: true }}
-                    // Mobil uchun optimallashtirish
-                    inputStyle={{ width: '100%', height: '48px', fontSize: '16px', padding: '0 12px' }}
-                    containerStyle={{ marginBottom: 0 }}
-                    buttonStyle={{ padding: '0 8px', height: '48px' }}
-                  />
+                  <div className="relative">
+                    <Input
+                      type="tel"
+                      value={userPhone}
+                      onChange={handlePhoneChange}
+                      placeholder="99 999 99 99"
+                      className="pl-20 h-12 text-sm"
+                    />
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium pointer-events-none">
+                      +998
+                    </div>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium flex items-center gap-2">
