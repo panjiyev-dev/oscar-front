@@ -21,7 +21,7 @@ import useEmblaCarousel from 'embla-carousel-react';
 import ProductDetails from "@/components/ProductDetails";
 // 👇 Yangi hook'larni import qilish
 import { useProductsQuery, useCategoriesQuery } from "@/hooks/use-products";
-import { Product, Category } from "@/firebase/config"; 
+import { Product, Category } from "@/firebase/config";
 
 
 const Index = () => {
@@ -46,7 +46,7 @@ const Index = () => {
     if (allProducts && firebaseCategories) {
       setProducts(allProducts);
       setCategories(firebaseCategories);
-      
+
       // Eng ko'p chegirmali mahsulotlarni topish va stock > 0 bo'lganlarini filtrlash
       const sortedProducts = [...allProducts]
         .filter(p => p.stock > 0)  // Qolmagan mahsulotlarni chiqarib tashlash
@@ -74,7 +74,7 @@ const Index = () => {
   // 👇 Kategoriyalarni tayyorlash. Oldingi konfikt yuzaga keltirgan JSON ga asoslangan qismni almashtirdik.
   const allCategories = [{ id: 0, name: "Barchasi", icon: "📦", color: "bg-gray-200" }, ...categories];
   const visibleCategories = allCategories.slice(0, 3);
-  
+
   // Yuklanish holatini tekshirish
   if (isLoadingProducts || isLoadingCategories) {
     return (
@@ -89,7 +89,7 @@ const Index = () => {
       </div>
     );
   }
-  
+
   // Xato holatini tekshirish
   if (isErrorProducts || isErrorCategories) {
     return (
@@ -132,79 +132,81 @@ const Index = () => {
       <div className="container mx-auto px-4 py-6">
         {/* Hero Banner with slider */}
         {highestDiscountProducts.length > 0 && (
-            <div className="mb-6">
+          <div className="mb-6">
             <h2 className="text-lg font-bold mb-4">Eng yuqori chegirmalar!</h2>
             <div className="overflow-hidden" ref={emblaRef}>
-                <div className="flex">
+              <div className="flex">
                 {highestDiscountProducts.map((product) => (
-                    <div 
-                    key={product.id} 
+                  <div
+                    key={product.id}
                     className="min-w-0 flex-shrink-0 flex-grow-0 basis-full pr-4 cursor-pointer"
                     onClick={() => handleProductClick(product.id)}
-                    >
+                  >
                     <div className="relative w-full h-56 rounded-lg overflow-hidden">
-                        <img
+                      <img
                         src={product.image}
                         alt={product.name}
                         className="w-full h-full object-cover"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                        <span className="absolute top-2 right-2 bg-red-500 text-white text-sm font-bold px-2 py-1 rounded-full">
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                      <span className="absolute top-2 right-2 bg-red-500 text-white text-sm font-bold px-2 py-1 rounded-full">
                         -{product.discount}%
-                        </span>
-                        <div className="absolute bottom-4 left-4 text-white">
+                      </span>
+                      <div className="absolute bottom-4 left-4 text-white">
                         <h3 className="text-xl font-bold">{product.name}</h3>
                         <p className="text-sm mt-1">Batafsil</p>
-                        </div>
+                      </div>
                     </div>
-                    </div>
+                  </div>
                 ))}
-                </div>
+              </div>
             </div>
-            </div>
+          </div>
         )}
 
         {/* Categories */}
         {categories.length > 0 && (
-            <div className="mb-8">
+          <div className="mb-8">
             <h2 className="text-lg font-semibold mb-4">Kategoriyalar</h2>
             <div className="grid grid-cols-4 gap-4">
-                {visibleCategories.map((category) => (
+              {visibleCategories.map((category) => (
                 <Card
-                    key={category.id}
-                    onClick={() => setSelectedCategory(category.name)}
-                    className={cn(
-                    "hover:shadow-md transition-shadow cursor-pointer",
+                  key={category.id}
+                  onClick={() => setSelectedCategory(category.name)}
+                  className={cn(
+                    "hover:shadow-md transition-shadow cursor-pointer min-h-[120px] flex flex-col justify-between", // Min height va flex qo'shildi
                     selectedCategory === category.name && "border-red-500 border-2"
-                    )}
+                  )}
                 >
-                    <CardContent className="p-4 flex flex-col items-center justify-center text-center h-full">
+                  <CardContent className="p-4 flex flex-col items-center text-center flex-1 justify-center">
                     <div
-                        className={`w-12 h-12 ${category.color} rounded-full flex items-center justify-center mx-auto mb-2`}
+                      className={`w-12 h-12 ${category.color} rounded-full flex items-center justify-center mx-auto mb-3`} // mb-3 ga oshirildi
                     >
-                        <span className="text-2xl">{category.icon}</span>
+                      <span className="text-2xl">{category.icon}</span>
                     </div>
-                    <h3 className="text-sm font-medium leading-tight">{category.name}</h3>
-                    </CardContent>
+                    <h3 className="font-semibold text-sm line-clamp-2 px-1 mb-2"> {/* line-clamp-2, text-sm, padding va mb-2 qo'shildi */}
+                      {category.name}
+                    </h3>
+                  </CardContent>
                 </Card>
-                ))}
-                {allCategories.length > 3 && (
+              ))}
+              {allCategories.length > 3 && (
                 <Card
-                    onClick={() => setIsModalOpen(true)}
-                    className="hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={() => setIsModalOpen(true)}
+                  className="hover:shadow-md transition-shadow cursor-pointer min-h-[120px] flex flex-col justify-between" // Min height va flex qo'shildi
                 >
-                    <CardContent className="p-4 flex flex-col items-center justify-center text-center h-full">
+                  <CardContent className="p-4 flex flex-col items-center justify-center text-center h-full">
                     <div
-                        className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-2"
+                      className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-2"
                     >
-                        <ChevronRight className="h-6 w-6 text-gray-600" />
+                      <ChevronRight className="h-6 w-6 text-gray-600" />
                     </div>
                     <h3 className="text-sm font-medium leading-tight">Davomi</h3>
-                    </CardContent>
+                  </CardContent>
                 </Card>
-                )}
+              )}
             </div>
-            </div>
+          </div>
         )}
 
         {/* Mahsulotlar Ro'yxati */}
@@ -213,15 +215,15 @@ const Index = () => {
             {searchQuery
               ? `Qidiruv natijalari (${filteredProducts.length})`
               : selectedCategory === "Barchasi"
-              ? "Barcha mahsulotlar"
-              : `${selectedCategory} kategoriyasidagi mahsulotlar`}
+                ? "Barcha mahsulotlar"
+                : `${selectedCategory} kategoriyasidagi mahsulotlar`}
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {filteredProducts.map((product) => (
               <ProductCard
                 key={product.id}
                 product={product}
-                // onClick={() => handleProductClick(product.id)}
+              // onClick={() => handleProductClick(product.id)}
               />
             ))}
           </div>
@@ -237,7 +239,7 @@ const Index = () => {
 
       {/* Kategoriyalar Modali */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[80vh] overflow-y-auto"> {/* Modal balandligini cheklab, scroll qo'shildi */}
           <DialogHeader>
             <DialogTitle>Barcha kategoriyalar</DialogTitle>
           </DialogHeader>
@@ -250,17 +252,19 @@ const Index = () => {
                   setIsModalOpen(false);
                 }}
                 className={cn(
-                  "hover:shadow-md transition-shadow cursor-pointer",
+                  "hover:shadow-md transition-shadow cursor-pointer min-h-[120px] flex flex-col justify-between", // Min height va flex qo'shildi
                   selectedCategory === category.name && "border-red-500 border-2"
                 )}
               >
-                <CardContent className="p-4 flex flex-col items-center justify-center text-center h-full">
+                <CardContent className="p-4 flex flex-col items-center text-center flex-1 justify-center">
                   <div
-                    className={`w-12 h-12 ${category.color} rounded-full flex items-center justify-center mx-auto mb-2`}
+                    className={`w-12 h-12 ${category.color} rounded-full flex items-center justify-center mx-auto mb-3`} // mb-3 ga oshirildi
                   >
                     <span className="text-2xl">{category.icon}</span>
                   </div>
-                  <h3 className="text-sm font-medium leading-tight">{category.name}</h3>
+                  <h3 className="text-sm font-medium line-clamp-2 px-1 mb-2"> {/* line-clamp-2, text-sm, padding va mb-2 qo'shildi */}
+                    {category.name}
+                  </h3>
                 </CardContent>
               </Card>
             ))}

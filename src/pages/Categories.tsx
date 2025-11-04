@@ -5,14 +5,11 @@ import { ChevronRight, Grid3X3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ProductCard } from "@/components/ProductCard";
-import { MobileNavigation } from "@/components/MobileNavigation";
-// 👇 JSON importini o'chirib tashladik
-// import productsData from "@/data/products.json"; 
+import { MobileNavigation } from "@/components/MobileNavigation"; 
 
 // 👇 Firebase'dan ma'lumotlarni oluvchi hook'lar va turlarni import qildik
 import { useProductsQuery, useCategoriesQuery } from "@/hooks/use-products";
 import { Product, Category as FirebaseCategory } from "@/firebase/config";
-
 
 // Komponent ichida ishlatiladigan kategoriya turini aniqlash (count qo'shilgan)
 interface DisplayCategory extends FirebaseCategory {
@@ -104,9 +101,6 @@ export default function Categories() {
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
               {filteredProducts.map((product) => (
-                // Eslatma: ProductCard navigatsiya uchun 'onClick' propini qabul qiladi
-                // ProductCard.tsx faylida o'zgartirish kiritilgan bo'lsa, bu yerda ham shunga moslanishi kerak.
-                // Ko'rsatilgan ProductCard.tsx kodi allaqachon `useNavigate` dan foydalangan, shuning uchun onClick propsiz ham ishlashi mumkin.
                 <ProductCard
                   key={product.id}
                   product={product}
@@ -144,16 +138,18 @@ export default function Categories() {
               {categories.map((category) => (
                 <Card
                   key={category.name}
-                  className="hover:shadow-md transition-shadow cursor-pointer"
+                  className="hover:shadow-md transition-shadow cursor-pointer min-h-[120px] flex flex-col justify-between" // Min height qo'shildi va flex-col justify-between
                   onClick={() => setSelectedCategory(category.name)}
                 >
-                  <CardContent className="p-4 flex flex-col items-center text-center">
-                    <div className={`w-12 h-12 ${category.color} rounded-full flex items-center justify-center mb-2`}>
+                  <CardContent className="p-4 flex flex-col items-center text-center flex-1 justify-center">
+                    <div className={`w-12 h-12 ${category.color} rounded-full flex items-center justify-center mb-3`}>
                       <span className="text-2xl">{category.icon}</span>
                     </div>
-                    <h3 className="font-semibold mb-1 truncate">{category.name}</h3>
-                    <p className="text-xs text-muted-foreground">{category.count} ta mahsulot</p>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground mt-2" />
+                    <h3 className="font-semibold text-sm mb-1 line-clamp-2 px-1"> {/* line-clamp-2 qo'shildi, text-sm va padding */}
+                      {category.name}
+                    </h3>
+                    <p className="text-xs text-muted-foreground mb-2">{category.count} ta mahsulot</p>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground self-end" /> {/* self-end bilan pastga surildi */}
                   </CardContent>
                 </Card>
               ))}
