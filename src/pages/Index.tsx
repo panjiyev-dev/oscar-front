@@ -22,6 +22,7 @@ import ProductDetails from "@/components/ProductDetails";
 // 👇 Yangi hook'larni import qilish
 import { useProductsQuery, useCategoriesQuery } from "@/hooks/use-products";
 import { Product, Category } from "@/firebase/config";
+import Footer from "@/components/Footer";
 
 
 const Index = () => {
@@ -234,8 +235,7 @@ const Index = () => {
       <PaymentModal
         isOpen={isPaymentOpen}
         onClose={() => setIsPaymentOpen(false)}
-        cartItems={[]}
-      />
+        cartItems={[]} usdRate={0}      />
 
       {/* Kategoriyalar Modali */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -273,6 +273,8 @@ const Index = () => {
       </Dialog>
 
       <MobileNavigation />
+      <Footer />
+
       <div className="pb-20"></div>
     </div>
   );

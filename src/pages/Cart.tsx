@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useProductsQuery } from "@/hooks/use-products";
 import { useUsdRateQuery } from "@/hooks/use-settings";
 import { Product } from "@/firebase/config";
+import Footer from "@/components/Footer";
 
 interface CartItem extends Product {
   boxQuantity: number;
@@ -176,6 +177,7 @@ export default function Cart() {
 
       <PaymentModal isOpen={isPaymentOpen} onClose={() => setIsPaymentOpen(false)} cartItems={cartItems} usdRate={usdRate || 12600} />
       <MobileNavigation />
+      <Footer />
       <div className="pb-20"></div>
     </div>
   );

@@ -10,6 +10,7 @@ import { MobileNavigation } from "@/components/MobileNavigation";
 // 👇 Firebase'dan ma'lumotlarni oluvchi hook'lar va turlarni import qildik
 import { useProductsQuery, useCategoriesQuery } from "@/hooks/use-products";
 import { Product, Category as FirebaseCategory } from "@/firebase/config";
+import Footer from "@/components/Footer";
 
 // Komponent ichida ishlatiladigan kategoriya turini aniqlash (count qo'shilgan)
 interface DisplayCategory extends FirebaseCategory {
@@ -157,6 +158,7 @@ export default function Categories() {
           )}
       </div>
       <MobileNavigation />
+      <Footer />
       <div className="pb-20"></div>
     </div>
   );

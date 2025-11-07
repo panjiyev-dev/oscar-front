@@ -4,6 +4,7 @@ import { useState } from "react";
 import { MapPin, Settings, ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MobileNavigation } from "@/components/MobileNavigation";
+import Footer from "@/components/Footer";
 
 
 export default function Profile() {
@@ -13,11 +14,12 @@ export default function Profile() {
     setIsAddressesExpanded(!isAddressesExpanded);
   };
   
+  
 
   const locations = [
-    { name: "Toshkent, Chilonzor tumani", center: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d47980.58553017213!2d69.20447265!3d41.269982199999994!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x38ae8a6add9db721%3A0x7a27c4f09ef4001c!2z0KfQuNC70LDQvdC30LDRgNGB0LrQuNC5INGA0LDQudC-0L0sINCi0LDRiNC60LXQvdGCLCDQotCw0YjQutC10L3RgtGB0LrQsNGPINC-0LHQu9Cw0YHRgtGM!5e0!3m2!1sru!2s!4v1761716694546!5m2!1sru!2s" },
-    { name: "Toshkent, Sergeli tumani", center: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d96034.76222441236!2d69.24086965000001!3d41.21988935!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x38ae610c7037c045%3A0x9b45ef98ade73983!2z0KHQtdGA0LPQtdC70LjQudGB0LrQuNC5INGA0LDQudC-0L0sINCi0LDRiNC60LXQvdGCLCDQotCw0YjQutC10L3RgtGB0LrQsNGPINC-0LHQu9Cw0YHRgtGM!5e0!3m2!1sru!2s!4v1761716891105!5m2!1sru!2s" },
-    { name: "Toshkent, Almazar tumani", center: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d47913.97030830479!2d69.18028303120117!3d41.360544275013694!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x38ae8c479e45ded7%3A0xb0939da2a41a79de!2z0JDQu9C80LDQt9Cw0YDRgdC60LjQuSDRgNCw0LnQvtC9LCDQotCw0YjQutC10L3Rgiwg0KLQsNGI0LrQtdC90YLRgdC60LDRjyDQvtCx0LvQsNGB0YLRjA!5e0!3m2!1sru!2s!4v1761716973355!5m2!1sru!2s" },
+    { name: "O'rikzor bozori 4-blok 150 magazin", center: "https://www.google.com/maps/embed?pb=!1m17!1m12!1m3!1d5399.5771981692415!2d69.15059927460257!3d41.286836987667556!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m2!1m1!2zNDHCsDE3JzE1LjIiTiA2OcKwMDknMDYuOCJF!5e0!3m2!1sru!2s!4v1762486704323!5m2!1sru!2s" },
+    // { name: "Toshkent, Sergeli tumani", center: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d96034.76222441236!2d69.24086965000001!3d41.21988935!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x38ae610c7037c045%3A0x9b45ef98ade73983!2z0KHQtdGA0LPQtdC70LjQudGB0LrQuNC5INGA0LDQudC-0L0sINCi0LDRiNC60LXQvdGCLCDQotCw0YjQutC10L3RgtGB0LrQsNGPINC-0LHQu9Cw0YHRgtGM!5e0!3m2!1sru!2s!4v1761716891105!5m2!1sru!2s" },
+    // { name: "Toshkent, Almazar tumani", center: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d47913.97030830479!2d69.18028303120117!3d41.360544275013694!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x38ae8c479e45ded7%3A0xb0939da2a41a79de!2z0JDQu9C80LDQt9Cw0YDRgdC60LjQuSDRgNCw0LnQvtC9LCDQotCw0YjQutC10L3Rgiwg0KLQsNGI0LrQtdC90YLRgdC60LDRjyDQvtCx0LvQsNGB0YLRjA!5e0!3m2!1sru!2s!4v1761716973355!5m2!1sru!2s" },
   ];
 
   return (
@@ -80,6 +82,7 @@ export default function Profile() {
       </div>
 
       <MobileNavigation />
+      <Footer />
       <div className="pb-20"></div>
     </div>
   );
