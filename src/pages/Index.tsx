@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Search, ChevronRight } from "lucide-react";
+import { Search, ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,6 +27,9 @@ import Footer from "@/components/Footer";
 
 const Index = () => {
   // 👇 Firebase'dan ma'lumotlarni TanStack Query yordamida yuklash
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
   const { data: allProducts, isLoading: isLoadingProducts, isError: isErrorProducts } = useProductsQuery();
   const { data: firebaseCategories, isLoading: isLoadingCategories, isError: isErrorCategories } = useCategoriesQuery(); // Nomini 'firebaseCategories' ga o'zgartirdik
 
@@ -34,7 +37,6 @@ const Index = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Barchasi");
   const [highestDiscountProducts, setHighestDiscountProducts] = useState<Product[]>([]);
   const [currentPage, setCurrentPage] = useState("home");
@@ -111,24 +113,57 @@ const Index = () => {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white shadow-sm sticky top-0 z-40">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="text-2xl font-bold text-primary">🏆 Oscar</div>
-            </div>
-          </div>
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Mahsulot qidirish..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
+      <div className="container mx-auto px-4 py-4">
+        <div className="flex items-center justify-between">
+          {/* Logo */}
+          <div className="flex items-center gap-2">
+            <img
+              className="w-24 sm:w-28 object-contain"
+              src="https://i.ibb.co/99T4PDy1/2025-11-07-09-15-24-removebg-preview.png"
+              alt="Oscar logo"
             />
           </div>
+
+          {/* Search section */}
+          <div className="relative flex items-center">
+            {/* Toggle button */}
+            {!searchOpen ? (
+              <button
+                onClick={() => setSearchOpen(true)}
+                className="p-2 rounded-full hover:bg-gray-100 transition"
+              >
+                <Search className="h-5 w-5 text-gray-600" />
+              </button>
+            ) : (
+              <div className="flex items-center transition-all duration-300">
+                <div
+                  className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                    searchOpen ? "w-48 sm:w-64 opacity-100" : "w-0 opacity-0"
+                  }`}
+                >
+                  <Input
+                    placeholder="Mahsulot qidirish..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-3 pr-8 py-2 border-gray-300 text-sm"
+                    autoFocus
+                  />
+                </div>
+                <button
+                  onClick={() => {
+                    setSearchOpen(false);
+                    setSearchQuery("");
+                  }}
+                  className="p-2 ml-2 rounded-full hover:bg-gray-100 transition"
+                >
+                  <X className="h-5 w-5 text-gray-600" />
+                </button>
+              </div>
+            )}
+          </div>
         </div>
-      </header>
+      </div>
+    </header>
 
       <div className="container mx-auto px-4 py-6">
         {/* Hero Banner with slider */}
@@ -235,7 +270,7 @@ const Index = () => {
       <PaymentModal
         isOpen={isPaymentOpen}
         onClose={() => setIsPaymentOpen(false)}
-        cartItems={[]} usdRate={0}      />
+        cartItems={[]} usdRate={0} />
 
       {/* Kategoriyalar Modali */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
