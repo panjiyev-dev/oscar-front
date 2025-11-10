@@ -52,7 +52,7 @@ export function ProductCard({ product }: ProductCardProps) {
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (isOutOfStock) return;  // Out of stock bo'lsa, hech narsa qilma
+    if (isOutOfStock) return;
     if (quantity === 0) {
       setQuantity(1);
       navigate(`/products/${product.id}`);
@@ -61,10 +61,15 @@ export function ProductCard({ product }: ProductCardProps) {
     }
   };
 
-  const discountedPrice = Math.round(product.pricePiece * (1 - product.discount / 100));
-  const originalPrice = product.discount > 0 ? Math.round(product.pricePiece / (1 - product.discount / 100)) : product.pricePiece;
+  const discountedPrice = product.pricePiece * (1 - product.discount / 100);
+  const originalPrice = product.discount > 0 ? product.pricePiece / (1 - product.discount / 100) : product.pricePiece;
 
-  const formattedPrice = new Intl.NumberFormat("uz-UZ", { style: "currency", currency: "UZS", maximumFractionDigits: 0 }).format(discountedPrice);
+  const formatCurrency = (price: number) => {
+    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(price);
+  };
+
+  const formattedDiscountedPrice = formatCurrency(discountedPrice);
+  const formattedOriginalPrice = formatCurrency(originalPrice);
 
   return (
     <Card 
@@ -79,7 +84,7 @@ export function ProductCard({ product }: ProductCardProps) {
             </Badge>
           )}
           {isOutOfStock && (
-            <Badge className="absolute top-2 left-2 bg-red-500 text-red px-2 py-1 text-xs rounded-full">
+            <Badge className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 text-xs rounded-full">
               Qolmagan
             </Badge>
           )}
@@ -88,10 +93,10 @@ export function ProductCard({ product }: ProductCardProps) {
         <div className="space-y-1">
           <h3 className="font-semibold text-sm truncate line-clamp-1">{product.name}</h3>
           <div className="flex flex-col">
-            <span className="font-bold text-red-600">{formattedPrice}</span>
+            <span className="font-bold text-red-600">{formattedDiscountedPrice}</span>
             {product.discount > 0 && !isOutOfStock && (
               <span className="text-xs text-gray-400 line-through">
-                {originalPrice.toLocaleString()} so'm
+                {formattedOriginalPrice}
               </span>
             )}
           </div>

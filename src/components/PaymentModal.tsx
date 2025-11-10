@@ -1,5 +1,6 @@
 "use client";
-import { useState, useEffect, useRef, useMemo } from "react";
+
+import { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,7 @@ import "react-phone-input-2/lib/style.css";
 const TELEGRAM_BOT_TOKEN = '7586941333:AAHKly13Z3M5qkyKjP-6x-thWvXdJudIHsU';
 // Eslatma: Admin chat ID raqam tipida bo'lishi kerak.
 const ADMIN_CHAT_ID = 7122472578;
+const BOT_USERNAME = 'oscaruz_bot';
 // --- Administrative Divisions JSON (O'zbekiston viloyatlari va tumanlari) ---
 const administrativeDivisions = {
   "administrative_divisions": {
@@ -295,6 +297,7 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
   const [selectedDistrict, setSelectedDistrict] = useState<string>("");
   const [street, setStreet] = useState<string>("");
   const [house, setHouse] = useState<string>("");
+  const [orderId, setOrderId] = useState<string>("");
   const { toast } = useToast();
   // Klaviatura yopilganda tugma animatsiyasi uchun state
   const [showBounce, setShowBounce] = useState(false);
@@ -319,13 +322,14 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
     return () => window.removeEventListener('resize', handleResize);
   }, [step, isFormComplete, isProcessing]);
   // --- Calculations ---
-  const totalAmountUZS = cartItems.reduce((sum, item) => {
-    const boxAmount = item.boxQuantity * item.priceBox;
-    // item.discount 0 dan 100 gacha bo'lishi mumkin.
-    const pieceAmount = item.pieceQuantity * item.pricePiece * (1 - (item.discount || 0) / 100);
-    return sum + Math.round(boxAmount + pieceAmount);
-  }, 0);
-  const totalAmountUSD = (totalAmountUZS / usdRate).toFixed(2);
+  const totalAmountUSD = useMemo(() => {
+    return cartItems.reduce((sum, item) => {
+      const boxAmount = item.boxQuantity * item.priceBox;
+      // item.discount 0 dan 100 gacha bo'lishi mumkin.
+      const pieceAmount = item.pieceQuantity * item.pricePiece * (1 - (item.discount || 0) / 100);
+      return sum + (boxAmount + pieceAmount);
+    }, 0).toFixed(2);
+  }, [cartItems]);
   const paymentMethods = [
     { id: "payme", name: "Payme", icon: Wallet, color: "bg-blue-400" },
     { id: "click", name: "Click", icon: Smartphone, color: "bg-green-400" },
@@ -362,8 +366,8 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
       const orderItems = cartItems.map(item => {
         const boxAmount = item.boxQuantity * item.priceBox;
         const pieceAmount = item.pieceQuantity * item.pricePiece * (1 - (item.discount || 0) / 100);
-        const itemTotal = Math.round(boxAmount + pieceAmount);
-        return `${item.name} (${item.boxQuantity} karobka + ${item.pieceQuantity} dona): ${itemTotal.toLocaleString()} so'm`;
+        const itemTotal = (boxAmount + pieceAmount).toFixed(2);
+        return `${item.name} (${item.boxQuantity} karobka + ${item.pieceQuantity} dona): $${itemTotal}`;
       }).join('\n');
       const locationDetails = selectedRegion && selectedDistrict ?
         `Viloyat: ${selectedRegion}, Tuman: ${selectedDistrict}, Kocha: ${street}, Uy: ${house}` :
@@ -371,8 +375,9 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
       
       const fullPhone = `+998 ${userPhone}`;
       const message = `🛒 *Yangi buyurtma qabul qilindi!*\n\n` +
+                     `🆔 *Buyurtma ID:* ${orderId}\n\n` +
                      `📝 *Mahsulotlar:*\n${orderItems}\n\n` +
-                     `💰 *Jami:* ${totalAmountUZS.toLocaleString()} so'm (~${totalAmountUSD} $)\n` +
+                     `💰 *Jami:* $${totalAmountUSD}\n` +
                      `👤 *Ism:* ${userName}\n` +
                      `📞 *Telefon:* ${fullPhone}\n` +
                      `📍 *Manzil:* ${locationDetails}\n` +
@@ -427,24 +432,24 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
     }
     setIsProcessing(true);
     setShowBounce(false); // Animatsiyani to'xtat
+    const generatedOrderId = Date.now().toString();
+    setOrderId(generatedOrderId);
     try {
       await updateStockInFirebase();
       await sendOrderToAdmin();
       clearCookies();
       setStep('success');
-      toast({ title: "Muvaffaqiyat!", description: "Buyurtmangiz qabul qilindi!" });
+      toast({ title: "Muvaffaqiyat!", description: "Buyurtmangiz qabul qilindi! Endi to'lovni amalga oshiring." });
     } catch (error) {
       toast({ title: "Xato", description: "Buyurtma berishda muammo!", variant: "destructive" });
     } finally {
       setIsProcessing(false);
     }
-  
-    // Modal yopilgandan so'ng sahifani yangilash
-    setTimeout(() => {
-      onClose();
-      // Bosh sahifaga o'tish (redirect)
-      window.location.href = '/';
-    }, 3000);
+  };
+  const handlePayNow = () => {
+    if (orderId) {
+      window.open(`https://t.me/${BOT_USERNAME}?start=pay_${orderId}`, '_blank');
+    }
   };
   // --- Render: Success Step ---
   if (step === 'success') {
@@ -452,9 +457,16 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent>
           <div className="text-center py-8">
-            <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
-            <h2 className="text-xl font-bold mb-2">Buyurtma muvaffaqiyatli!</h2>
-            <p className="text-gray-600 mb-6">Rahmat! Tez orada bog'lanamiz.</p>
+            <CheckCircle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+            <h2 className="text-xl font-bold mb-2">Buyurtma qabul qilindi!</h2>
+            <p className="text-gray-600 mb-6">To'liq amalga oshirish uchun to'lovni to'lang.</p>
+            <Button
+              onClick={handlePayNow}
+              className="w-full h-12 bg-blue-500 hover:bg-blue-600 text-white font-semibold shadow-sm hover:shadow-md transition-all active:scale-95 mb-4"
+            >
+              To'lov qilishni bosing
+            </Button>
+            <p className="text-xs text-gray-500">Rahmat! Tez orada bog'lanamiz.</p>
           </div>
         </DialogContent>
       </Dialog>
@@ -476,12 +488,12 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
                 {cartItems.map((item) => {
                   const boxAmount = item.boxQuantity * item.priceBox;
                   const pieceAmount = item.pieceQuantity * item.pricePiece * (1 - (item.discount || 0) / 100);
-                  const itemTotal = Math.round(boxAmount + pieceAmount);
+                  const itemTotal = (boxAmount + pieceAmount).toFixed(2);
                   return (
                     <div key={item.id} className="flex justify-between items-center py-2 border-b last:border-b-0 text-xs overflow-x-hidden">
                       <span className="truncate flex-1 mr-2 line-clamp-1">{item.name} ({item.boxQuantity} karobka, {item.pieceQuantity} dona)</span>
                       <div className="text-right min-w-[70px]">
-                        <div className="font-medium">{itemTotal.toLocaleString()} so'm</div>
+                        <div className="font-medium">${itemTotal}</div>
                       </div>
                     </div>
                   );
@@ -491,8 +503,7 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
               <div className="flex justify-between font-semibold text-lg">
                 <span>Jami:</span>
                 <div className="text-right">
-                  <span>{totalAmountUZS.toLocaleString()} so'm</span>
-                  <span className="text-sm text-gray-500 block">≈ {totalAmountUSD} $</span>
+                  <span>${totalAmountUSD}</span>
                 </div>
               </div>
               {/* Payment methods */}
@@ -636,7 +647,7 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
               {/* Summary and Actions */}
               <div className="pt-4 border-t space-y-3 overflow-x-hidden">
                 <div className="flex justify-between text-sm text-gray-500 bg-gray-50 p-3 rounded-md">
-                  <span>Jami: {totalAmountUZS.toLocaleString()} so'm</span>
+                  <span>Jami: ${totalAmountUSD}</span>
                   <span>To'lov: {paymentMethod.toUpperCase()}</span>
                 </div>
                 <div className="space-y-2">

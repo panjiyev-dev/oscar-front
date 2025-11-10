@@ -1,26 +1,30 @@
 "use client";
 
 import { useState } from "react";
-import { MapPin, Settings, ChevronDown } from "lucide-react";
+import { MapPin, Settings, ChevronDown, ExternalLink } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { MobileNavigation } from "@/components/MobileNavigation";
 import Footer from "@/components/Footer";
 
-
 export default function Profile() {
   const [isAddressesExpanded, setIsAddressesExpanded] = useState(false);
-
   const toggleAddresses = () => {
     setIsAddressesExpanded(!isAddressesExpanded);
   };
-  
-  
 
   const locations = [
-    { name: "O'rikzor bozori 4-blok 150 magazin", center: "https://www.google.com/maps/embed?pb=!1m17!1m12!1m3!1d5399.5771981692415!2d69.15059927460257!3d41.286836987667556!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m2!1m1!2zNDHCsDE3JzE1LjIiTiA2OcKwMDknMDYuOCJF!5e0!3m2!1sru!2s!4v1762486704323!5m2!1sru!2s" },
-    // { name: "Toshkent, Sergeli tumani", center: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d96034.76222441236!2d69.24086965000001!3d41.21988935!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x38ae610c7037c045%3A0x9b45ef98ade73983!2z0KHQtdGA0LPQtdC70LjQudGB0LrQuNC5INGA0LDQudC-0L0sINCi0LDRiNC60LXQvdGCLCDQotCw0YjQutC10L3RgtGB0LrQsNGPINC-0LHQu9Cw0YHRgtGM!5e0!3m2!1sru!2s!4v1761716891105!5m2!1sru!2s" },
-    // { name: "Toshkent, Almazar tumani", center: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d47913.97030830479!2d69.18028303120117!3d41.360544275013694!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x38ae8c479e45ded7%3A0xb0939da2a41a79de!2z0JDQu9C80LDQt9Cw0YDRgdC60LjQuSDRgNCw0LnQvtC9LCDQotCw0YjQutC10L3Rgiwg0KLQsNGI0LrQtdC90YLRgdC60LDRjyDQvtCx0LvQsNGB0YLRjA!5e0!3m2!1sru!2s!4v1761716973355!5m2!1sru!2s" },
+    { 
+      name: "O'rikzor bozori 4-blok 150 magazin", 
+      lat: 41.28762,
+      lng: 69.15189,
+      mapsUrl: "https://www.google.com/maps?q=41.28762,69.15189"
+    },
   ];
+
+  const openLocation = (mapsUrl: string) => {
+    window.open(mapsUrl, '_blank');
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -32,7 +36,6 @@ export default function Profile() {
           </div>
         </div>
       </header>
-
       <div className="container mx-auto px-4 py-6">
         {/* Manzillarimiz (Our Addresses) section - Collapsible */}
         <Card className="mb-6">
@@ -53,34 +56,34 @@ export default function Profile() {
                     <div className="p-4 bg-primary/5 border-b">
                       <h3 className="font-semibold text-primary">{location.name}</h3>
                     </div>
-                    <iframe
-                      src={location.center}
-                      width="100%"
-                      height="300"
-                      style={{ border: 0 }}
-                      loading="lazy"
-                      referrerPolicy="no-referrer-when-downgrade"
-                      className="w-full"
-                    />
+                    <div className="p-4 text-center">
+                      <Button 
+                        onClick={() => openLocation(location.mapsUrl)}
+                        variant="outline"
+                        className="w-full flex items-center justify-center gap-2"
+                      >
+                        <MapPin className="h-4 w-4" />
+                        Xaritada ko'rish
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
               <p className="text-xs text-muted-foreground mt-4 italic">
-                *Haqiqiy Google Maps integratsiyasi orqali ko'rsatilgan. Zoom va joylashuvni sozlash mumkin.
+                *Haqiqiy Google Maps orqali ochiladi. Telefoningizdagi Google Maps ilovasiga o'tkaziladi.
               </p>
             </CardContent>
           )}
         </Card>
-
         {/* Yordam va Qo'llab-quvvatlash Card */}
-        <Card className="cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => window.open("https://t.me/s_panjiyev", "_blank")}>
+        <Card className="cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => window.open("https://t.me/s_panjiyev", "_blank")}>
           <CardContent className="p-4 flex items-center gap-4">
             <Settings className="h-6 w-6 text-primary" />
             <span className="text-lg font-bold">Yordam va qo'llab-quvvatlash</span>
           </CardContent>
         </Card>
       </div>
-
       <MobileNavigation />
       <Footer />
       <div className="pb-20"></div>

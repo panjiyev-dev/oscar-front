@@ -64,19 +64,14 @@ const ProductDetails = ({ productId }: ProductDetailsProps) => {
     }
   }, [boxQuantity, pieceQuantity, product, cookieKey]);
 
-  const totalAmountUZS = useMemo(() => {
-    if (!product) return 0;
-    // Karobka uchun chegirmasiz
+  const totalAmountUSD = useMemo(() => {
+    if (!product) return "0.00";
+    // Karobka uchun chegirmasiz (priceBox = 0)
     const boxAmount = boxQuantity * product.priceBox;
     // Dona uchun chegirma bilan
     const pieceAmount = pieceQuantity * product.pricePiece * (1 - product.discount / 100);
-    return Math.round(boxAmount + pieceAmount);
+    return (boxAmount + pieceAmount).toFixed(2);
   }, [boxQuantity, pieceQuantity, product]);
-
-  const totalAmountUSD = useMemo(() => {
-    if (!usdRate || usdRate === 0) return 0;
-    return (totalAmountUZS / usdRate).toFixed(2);
-  }, [totalAmountUZS, usdRate]);
 
   const canAdd = useMemo(() => {
     if (!product) return false;
@@ -111,7 +106,7 @@ const ProductDetails = ({ productId }: ProductDetailsProps) => {
   if (isLoadingProducts) return <div className="p-4">Yuklanmoqda...</div>;
   if (isErrorProducts || !product) return <div className="p-4">Xato!</div>;
 
-  const discountedPiecePrice = Math.round(product.pricePiece * (1 - product.discount / 100));
+  const discountedPiecePrice = product.pricePiece * (1 - product.discount / 100);
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">
@@ -125,16 +120,12 @@ const ProductDetails = ({ productId }: ProductDetailsProps) => {
             <img src={product.image} alt={product.name} className="w-full md:w-64 h-64 object-contain" />
             <div className="flex-1 space-y-4">
               <h1 className="text-2xl font-bold truncate">{product.name}</h1>
-              <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{product.description}</p>
+              <p className="text-sm text-muted-foreground mb-4">{product.description}</p>
               <p className="text-sm text-muted-foreground">Kod: #{product.id}</p>
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span>Karobka narxi ({product.boxCapacity} dona):</span>
-                  <span className="font-bold text-red-600">{product.priceBox.toLocaleString()} so'm</span>
-                </div>
-                <div className="flex justify-between">
                   <span>Dona narxi:</span>
-                  <span className="font-bold text-red-600">{discountedPiecePrice.toLocaleString()} so'm</span>
+                  <span className="font-bold text-red-600">{discountedPiecePrice.toFixed(2)} $</span>
                 </div>
                 {product.discount > 0 && (
                   <>
@@ -166,8 +157,7 @@ const ProductDetails = ({ productId }: ProductDetailsProps) => {
                 <div className="flex justify-between pt-4 border-t">
                   <span className="text-lg font-bold">Jami:</span>
                   <div className="text-right">
-                    <span className="text-xl font-bold text-red-600 block">{totalAmountUZS.toLocaleString()} so'm</span>
-                    <span className="text-sm text-gray-500">≈ {totalAmountUSD} $ (kurs: {usdRate?.toLocaleString() || 'N/A'} so'm/$)</span>
+                    <span className="text-xl font-bold text-red-600 block">{totalAmountUSD} $</span>
                   </div>
                 </div>
               </div>
@@ -185,7 +175,7 @@ const ProductDetails = ({ productId }: ProductDetailsProps) => {
                 <CardContent className="p-4">
                   <img src={p.image} alt={p.name} className="w-full h-24 object-contain mb-2" />
                   <h3 className="text-sm font-medium truncate">{p.name}</h3>
-                  <p className="text-sm font-bold text-red-500 truncate">{p.pricePiece.toLocaleString()} so'm / dona</p>
+                  <p className="text-sm font-bold text-red-500 truncate">{p.pricePiece.toFixed(2)} $ / dona</p>
                 </CardContent>
               </Card>
             ))}
@@ -202,7 +192,7 @@ const ProductDetails = ({ productId }: ProductDetailsProps) => {
                 <CardContent className="p-4">
                   <img src={p.image} alt={p.name} className="w-full h-24 object-contain mb-2" />
                   <h3 className="text-sm font-medium truncate">{p.name}</h3>
-                  <p className="text-sm font-bold text-red-500 truncate">{p.pricePiece.toLocaleString()} so'm / dona</p>
+                  <p className="text-sm font-bold text-red-500 truncate">{p.pricePiece.toFixed(2)} $ / dona</p>
                 </CardContent>
               </Card>
             ))}

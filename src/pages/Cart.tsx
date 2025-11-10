@@ -90,13 +90,12 @@ export default function Cart() {
   };
 
   const totalQuantity = cartItems.reduce((sum, item) => sum + (item.boxQuantity * item.boxCapacity + item.pieceQuantity), 0);
-  const totalAmountUZS = cartItems.reduce((sum, item) => {
+  const totalAmountUSD = cartItems.reduce((sum, item) => {
     // Karobka chegirmasiz, dona chegirma bilan
     const boxAmount = item.boxQuantity * item.priceBox;
     const pieceAmount = item.pieceQuantity * item.pricePiece * (1 - item.discount / 100);
-    return sum + Math.round(boxAmount + pieceAmount);
-  }, 0);
-  const totalAmountUSD = usdRate ? (totalAmountUZS / usdRate).toFixed(2) : 0;
+    return sum + (boxAmount + pieceAmount);
+  }, 0).toFixed(2);
 
   if (isLoading) return <div>Yuklanmoqda...</div>;
   if (isError) return <div>Xato!</div>;
@@ -115,7 +114,7 @@ export default function Cart() {
           {cartItems.map((item) => {
             const boxAmount = item.boxQuantity * item.priceBox;
             const pieceAmount = item.pieceQuantity * item.pricePiece * (1 - item.discount / 100);
-            const itemTotal = Math.round(boxAmount + pieceAmount);
+            const itemTotal = (boxAmount + pieceAmount).toFixed(2);
             return (
               <Card key={item.id}>
                 <CardContent className="p-4">
@@ -125,7 +124,7 @@ export default function Cart() {
                       <h3 className="font-semibold truncate">{item.name}</h3>
                       <p className="text-sm text-gray-600 line-clamp-1 mb-2">Omborda {item.stock} dona</p>
                       <div className="flex justify-between items-center mb-2">
-                        <span className="font-bold text-red-600">{itemTotal.toLocaleString()} so'm</span>
+                        <span className="font-bold text-red-600">${itemTotal}</span>
                         <Button variant="ghost" size="sm" onClick={() => removeItem(item.id)}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -162,13 +161,12 @@ export default function Cart() {
           <CardContent className="p-4">
             <h3 className="font-semibold mb-4">Xulosa</h3>
             <div className="space-y-2 mb-4">
-              <div className="flex justify-between"><span>{totalQuantity} dona:</span><span>{totalAmountUZS.toLocaleString()} so'm</span></div>
-              <div className="flex justify-between text-sm text-gray-500">≈ {totalAmountUSD} $</div>
+              <div className="flex justify-between"><span>{totalQuantity} dona:</span><span>${totalAmountUSD}</span></div>
               <div className="flex justify-between"><span>Yetkazib berish:</span><span className="text-green-600">Bepul</span></div>
             </div>
             <Separator className="my-4" />
             <div className="flex justify-between text-lg font-bold mb-4">
-              <span>Jami:</span><span className="text-primary">{totalAmountUZS.toLocaleString()} so'm</span>
+              <span>Jami:</span><span className="text-primary">${totalAmountUSD}</span>
             </div>
             <Button onClick={() => setIsPaymentOpen(true)} className="w-full h-12">To'lash</Button>
           </CardContent>
