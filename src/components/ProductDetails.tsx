@@ -21,7 +21,7 @@ const ProductDetails = ({ productId }: ProductDetailsProps) => {
   const { toast } = useToast();
 
   const { data: allProducts, isLoading: isLoadingProducts, isError: isErrorProducts } = useProductsQuery();
-  const { data: usdRate } = useUsdRateQuery();
+  const { data: usdRate } = useUsdRateQuery(); // Foydalanilmayapti, lekin saqlab qoldik
 
   const [boxQuantity, setBoxQuantity] = useState(0);
   const [pieceQuantity, setPieceQuantity] = useState(0);
@@ -40,63 +40,98 @@ const ProductDetails = ({ productId }: ProductDetailsProps) => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   }, []);
 
+  // Cookie dan ma'lumotni yuklash
   useEffect(() => {
     const saved = Cookies.get(cookieKey);
     if (saved && product) {
       try {
         const { box, piece } = JSON.parse(saved);
-        setBoxQuantity(box || 0);
-        setPieceQuantity(piece || 0);
+        // Faqat bittasini qabul qilish
+        if (box > 0) {
+          setBoxQuantity(box);
+          setPieceQuantity(0);
+        } else if (piece > 0) {
+          setPieceQuantity(piece);
+          setBoxQuantity(0);
+        } else {
+          setBoxQuantity(0);
+          setPieceQuantity(0);
+        }
       } catch {
         Cookies.remove(cookieKey);
       }
     }
   }, [cookieKey, product]);
 
+  // Cookie ga saqlash
   useEffect(() => {
-    if (product) {
-      const data = { box: boxQuantity, piece: pieceQuantity };
-      if (data.box > 0 || data.piece > 0) {
-        Cookies.set(cookieKey, JSON.stringify(data), { expires: 7 });
-      } else {
-        Cookies.remove(cookieKey);
-      }
-    }
-  }, [boxQuantity, pieceQuantity, product, cookieKey]);
+    if (!product) return;
 
+    let box = boxQuantity;
+    let piece = pieceQuantity;
+
+    // Faqat bittasini saqlash: agar biri > 0 bo'lsa, ikkinchisi 0 deb saqlanadi
+    if (box > 0) piece = 0;
+    if (piece > 0) box = 0;
+
+    const totalPieces = box * product.boxCapacity + piece;
+    if (totalPieces > product.stock) {
+      toast({ title: "Ogohlantirish", description: `Omborda ${product.stock} dona!`, variant: "destructive" });
+      return;
+    }
+
+    if (box > 0 || piece > 0) {
+      Cookies.set(cookieKey, JSON.stringify({ box, piece }), { expires: 7 });
+    } else {
+      Cookies.remove(cookieKey);
+    }
+  }, [boxQuantity, pieceQuantity, product, cookieKey, toast]);
+
+  // Jami summa: box doim 0 narxda
   const totalAmountUSD = useMemo(() => {
     if (!product) return "0.00";
-    // Karobka uchun chegirmasiz (priceBox = 0)
-    const boxAmount = boxQuantity * product.priceBox;
-    // Dona uchun chegirma bilan
     const pieceAmount = pieceQuantity * product.pricePiece * (1 - product.discount / 100);
-    return (boxAmount + pieceAmount).toFixed(2);
+    return pieceAmount.toFixed(2); // box doim 0
+  }, [pieceQuantity, product]);
+
+  const totalPieces = useMemo(() => {
+    return boxQuantity * (product?.boxCapacity || 1) + pieceQuantity;
   }, [boxQuantity, pieceQuantity, product]);
 
-  const canAdd = useMemo(() => {
-    if (!product) return false;
-    const totalPieces = boxQuantity * product.boxCapacity + pieceQuantity;
-    return totalPieces <= product.stock;
-  }, [boxQuantity, pieceQuantity, product]);
-
-  const handleBoxChange = (delta: number) => {
-    const newBox = Math.max(0, boxQuantity + delta);
-    const totalPieces = newBox * (product?.boxCapacity || 1) + pieceQuantity;
-    if (totalPieces > (product?.stock || 0)) {
+  const handleBoxIncrement = () => {
+    if (!product) return;
+    const newBox = boxQuantity + 1;
+    const total = newBox * product.boxCapacity;
+    if (total > product.stock) {
       toast({ title: "Ogohlantirish", description: `Omborda ${product.stock} dona!`, variant: "destructive" });
       return;
     }
     setBoxQuantity(newBox);
+    setPieceQuantity(0); // Donani 0 qilish
   };
 
-  const handlePieceChange = (delta: number) => {
-    const newPiece = Math.max(0, Math.min(pieceQuantity + delta, (product?.boxCapacity || 1) - 1));
-    const totalPieces = boxQuantity * (product?.boxCapacity || 1) + newPiece;
-    if (totalPieces > (product?.stock || 0)) {
-      toast({ title: "Ogohlantirish", description: `Omborda ${product.stock} dona!`, variant: "destructive" });
-      return;
+  const handleBoxDecrement = () => {
+    if (boxQuantity > 0) {
+      setBoxQuantity(boxQuantity - 1);
+      // Agar 0 bo'lsa, dona ham 0 qoladi (lekin bu kerak emas — chunki dona allaqachon 0)
     }
-    setPieceQuantity(newPiece);
+  };
+
+  const handlePieceIncrement = () => {
+    if (!product) return;
+    const maxPiece = Math.min(product.boxCapacity - 1, product.stock); // Dona — karobkadan kam bo'lishi shart
+    if (pieceQuantity < maxPiece) {
+      setPieceQuantity(pieceQuantity + 1);
+      setBoxQuantity(0); // Karobkani 0 qilish
+    } else {
+      toast({ title: "Ogohlantirish", description: `Dona sifatida maksimum ${maxPiece} dona buyurtma qilishingiz mumkin.`, variant: "destructive" });
+    }
+  };
+
+  const handlePieceDecrement = () => {
+    if (pieceQuantity > 0) {
+      setPieceQuantity(pieceQuantity - 1);
+    }
   };
 
   const handleRelatedProductClick = (id: number) => {
@@ -134,26 +169,64 @@ const ProductDetails = ({ productId }: ProductDetailsProps) => {
                   </>
                 )}
                 <p className="text-sm text-gray-600">Omborda {product.stock} dona qoldi</p>
+                <p className="text-xs text-gray-600 italic">
+                  Karobka: {product?.boxCapacity} dona, narxi: 0 $
+                </p>
               </div>
 
               <div className="space-y-4">
+                {/* Karobka */}
                 <div className="flex items-center justify-between">
                   <span className="font-medium">Karobka:</span>
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={() => handleBoxChange(-1)} disabled={boxQuantity <= 0}>-</Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleBoxDecrement}
+                      disabled={boxQuantity <= 0}
+                    >
+                      -
+                    </Button>
                     <span className="w-8 text-center font-semibold">{boxQuantity}</span>
-                    <Button variant="outline" size="sm" onClick={() => handleBoxChange(1)} disabled={!canAdd}>+</Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleBoxIncrement}
+                      disabled={totalPieces >= product.stock}
+                    >
+                      +
+                    </Button>
                   </div>
                 </div>
+
+                {/* Dona */}
                 <div className="flex items-center justify-between">
                   <span className="font-medium">Dona:</span>
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={() => handlePieceChange(-1)} disabled={pieceQuantity <= 0}>-</Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handlePieceDecrement}
+                      disabled={pieceQuantity <= 0}
+                    >
+                      -
+                    </Button>
                     <span className="w-8 text-center font-semibold">{pieceQuantity}</span>
-                    <Button variant="outline" size="sm" onClick={() => handlePieceChange(1)} disabled={!canAdd || pieceQuantity >= product.boxCapacity - 1}>+</Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handlePieceIncrement}
+                      disabled={pieceQuantity >= product.boxCapacity - 1 || totalPieces >= product.stock}
+                    >
+                      +
+                    </Button>
                   </div>
                 </div>
-                {!canAdd && <p className="text-sm text-red-600">Stock yetarli emas!</p>}
+
+                {totalPieces > product.stock && (
+                  <p className="text-sm text-red-600">Ombor yetarli emas!</p>
+                )}
+
                 <div className="flex justify-between pt-4 border-t">
                   <span className="text-lg font-bold">Jami:</span>
                   <div className="text-right">
@@ -171,11 +244,17 @@ const ProductDetails = ({ productId }: ProductDetailsProps) => {
           <h2 className="text-lg font-semibold mb-4">O'xshash mahsulotlar</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {relatedProducts.map((p) => (
-              <Card key={p.id} onClick={() => handleRelatedProductClick(p.id)} className="cursor-pointer hover:shadow-md transition-shadow">
+              <Card
+                key={p.id}
+                onClick={() => handleRelatedProductClick(p.id)}
+                className="cursor-pointer hover:shadow-md transition-shadow"
+              >
                 <CardContent className="p-4">
                   <img src={p.image} alt={p.name} className="w-full h-24 object-contain mb-2" />
                   <h3 className="text-sm font-medium truncate">{p.name}</h3>
-                  <p className="text-sm font-bold text-red-500 truncate">{p.pricePiece.toFixed(2)} $ / dona</p>
+                  <p className="text-sm font-bold text-red-500 truncate">
+                    {p.pricePiece.toFixed(2)} $ / dona
+                  </p>
                 </CardContent>
               </Card>
             ))}
@@ -188,11 +267,17 @@ const ProductDetails = ({ productId }: ProductDetailsProps) => {
           <h2 className="text-lg font-semibold mb-4">Boshqa mahsulotlar</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {otherProducts.map((p) => (
-              <Card key={p.id} onClick={() => handleRelatedProductClick(p.id)} className="cursor-pointer hover:shadow-md transition-shadow">
+              <Card
+                key={p.id}
+                onClick={() => handleRelatedProductClick(p.id)}
+                className="cursor-pointer hover:shadow-md transition-shadow"
+              >
                 <CardContent className="p-4">
                   <img src={p.image} alt={p.name} className="w-full h-24 object-contain mb-2" />
                   <h3 className="text-sm font-medium truncate">{p.name}</h3>
-                  <p className="text-sm font-bold text-red-500 truncate">{p.pricePiece.toFixed(2)} $ / dona</p>
+                  <p className="text-sm font-bold text-red-500 truncate">
+                    {p.pricePiece.toFixed(2)} $ / dona
+                  </p>
                 </CardContent>
               </Card>
             ))}

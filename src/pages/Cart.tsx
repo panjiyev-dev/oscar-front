@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Cookies from 'js-cookie';
+import Cookies from "js-cookie";
 import { Minus, Plus, Trash2, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -37,14 +37,28 @@ export default function Cart() {
     const newCartItems: CartItem[] = [];
 
     for (const cookieName in cookies) {
-      if (cookieName.startsWith('cart_')) {
-        const productId = parseInt(cookieName.replace('cart_', ''));
+      if (cookieName.startsWith("cart_")) {
+        const productId = parseInt(cookieName.replace("cart_", ""), 10);
         const saved = cookies[cookieName];
         try {
-          const { box, piece } = JSON.parse(saved);
-          const product = allProducts.find(p => p.id === productId);
-          if (product && (box > 0 || piece > 0)) {
-            newCartItems.push({ ...product, boxQuantity: box, pieceQuantity: piece });
+          const { box = 0, piece = 0 } = JSON.parse(saved);
+          const product = allProducts.find((p) => p.id === productId);
+          if (product) {
+            // Faqat bittasini saqlash: box yoki piece
+            const finalBox = box > 0 ? box : 0;
+            const finalPiece = piece > 0 && box === 0 ? piece : 0;
+
+            const totalPieces = finalBox * product.boxCapacity + finalPiece;
+            if (totalPieces <= product.stock && (finalBox > 0 || finalPiece > 0)) {
+              newCartItems.push({
+                ...product,
+                boxQuantity: finalBox,
+                pieceQuantity: finalPiece,
+              });
+            } else {
+              // Noto'g'ri qiymat bo'lsa cookie o'chirilsin
+              Cookies.remove(cookieName);
+            }
           }
         } catch {
           Cookies.remove(cookieName);
@@ -54,48 +68,87 @@ export default function Cart() {
     setCartItems(newCartItems);
   };
 
-  const updateQuantity = (productId: number, delta: number, isBox = false) => {
-    const item = cartItems.find(item => item.id === productId);
+  const updateBoxQuantity = (productId: number, newBox: number) => {
+    const item = cartItems.find((item) => item.id === productId);
     if (!item) return;
 
-    let newBox = item.boxQuantity;
-    let newPiece = item.pieceQuantity;
+    if (newBox < 0) return;
 
-    if (isBox) {
-      newBox = Math.max(0, newBox + delta);
-    } else {
-      newPiece = Math.max(0, Math.min(newPiece + delta, item.boxCapacity - 1));
-    }
-
-    const totalPieces = newBox * item.boxCapacity + newPiece;
+    const totalPieces = newBox * item.boxCapacity;
     if (totalPieces > item.stock) {
-      toast({ title: "Ogohlantirish", description: "Stock yetarli emas!", variant: "destructive" });
+      toast({
+        title: "Ogohlantirish",
+        description: `Omborda faqat ${item.stock} dona mavjud!`,
+        variant: "destructive",
+      });
       return;
     }
 
-    const data = { box: newBox, piece: newPiece };
-    if (newBox > 0 || newPiece > 0) {
+    const data = { box: newBox, piece: 0 };
+    if (newBox > 0) {
       Cookies.set(`cart_${productId}`, JSON.stringify(data), { expires: 7 });
+      setCartItems((prev) =>
+        prev.map((cartItem) =>
+          cartItem.id === productId
+            ? { ...cartItem, boxQuantity: newBox, pieceQuantity: 0 }
+            : cartItem
+        )
+      );
     } else {
       Cookies.remove(`cart_${productId}`);
+      setCartItems((prev) => prev.filter((item) => item.id !== productId));
+    }
+  };
+
+  const updatePieceQuantity = (productId: number, newPiece: number) => {
+    const item = cartItems.find((item) => item.id === productId);
+    if (!item) return;
+
+    if (newPiece < 0 || newPiece >= item.boxCapacity) return;
+
+    if (newPiece > item.stock) {
+      toast({
+        title: "Ogohlantirish",
+        description: `Omborda faqat ${item.stock} dona mavjud!`,
+        variant: "destructive",
+      });
+      return;
     }
 
-    setCartItems(prev => prev.map(cartItem => cartItem.id === productId ? { ...cartItem, boxQuantity: newBox, pieceQuantity: newPiece } : cartItem));
+    const data = { box: 0, piece: newPiece };
+    if (newPiece > 0) {
+      Cookies.set(`cart_${productId}`, JSON.stringify(data), { expires: 7 });
+      setCartItems((prev) =>
+        prev.map((cartItem) =>
+          cartItem.id === productId
+            ? { ...cartItem, boxQuantity: 0, pieceQuantity: newPiece }
+            : cartItem
+        )
+      );
+    } else {
+      Cookies.remove(`cart_${productId}`);
+      setCartItems((prev) => prev.filter((item) => item.id !== productId));
+    }
   };
 
   const removeItem = (productId: number) => {
     Cookies.remove(`cart_${productId}`);
-    setCartItems(prev => prev.filter(item => item.id !== productId));
-    toast({ title: "O'chirildi" });
+    setCartItems((prev) => prev.filter((item) => item.id !== productId));
+    toast({ title: "Mahsulot o'chirildi" });
   };
 
-  const totalQuantity = cartItems.reduce((sum, item) => sum + (item.boxQuantity * item.boxCapacity + item.pieceQuantity), 0);
-  const totalAmountUSD = cartItems.reduce((sum, item) => {
-    // Karobka chegirmasiz, dona chegirma bilan
-    const boxAmount = item.boxQuantity * item.priceBox;
-    const pieceAmount = item.pieceQuantity * item.pricePiece * (1 - item.discount / 100);
-    return sum + (boxAmount + pieceAmount);
-  }, 0).toFixed(2);
+  const totalQuantity = cartItems.reduce(
+    (sum, item) => sum + (item.boxQuantity * item.boxCapacity + item.pieceQuantity),
+    0
+  );
+
+  // Karobka narxi doim 0 — faqat dona hisoblanadi
+  const totalAmountUSD = cartItems
+    .reduce((sum, item) => {
+      const pieceAmount = item.pieceQuantity * item.pricePiece * (1 - item.discount / 100);
+      return sum + pieceAmount;
+    }, 0)
+    .toFixed(2);
 
   if (isLoading) return <div>Yuklanmoqda...</div>;
   if (isError) return <div>Xato!</div>;
@@ -112,38 +165,85 @@ export default function Cart() {
       ) : (
         <div className="space-y-4 mb-8">
           {cartItems.map((item) => {
-            const boxAmount = item.boxQuantity * item.priceBox;
-            const pieceAmount = item.pieceQuantity * item.pricePiece * (1 - item.discount / 100);
-            const itemTotal = (boxAmount + pieceAmount).toFixed(2);
+            // Faqat dona uchun narx
+            const itemTotal = (
+              item.pieceQuantity * item.pricePiece * (1 - item.discount / 100)
+            ).toFixed(2);
+
             return (
               <Card key={item.id}>
                 <CardContent className="p-4">
                   <div className="flex items-start gap-4">
-                    <img src={item.image} alt={item.name} className="w-20 h-20 object-contain" />
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="w-20 h-20 object-contain"
+                    />
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold truncate">{item.name}</h3>
-                      <p className="text-sm text-gray-600 line-clamp-1 mb-2">Omborda {item.stock} dona</p>
+                      <p className="text-sm text-gray-600 line-clamp-1 mb-2">
+                        Omborda {item.stock} dona
+                      </p>
                       <div className="flex justify-between items-center mb-2">
                         <span className="font-bold text-red-600">${itemTotal}</span>
-                        <Button variant="ghost" size="sm" onClick={() => removeItem(item.id)}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeItem(item.id)}
+                        >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
+
+                      {/* Karobka */}
                       <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
                           <span>Karobka:</span>
-                          <div className="flex gap-2">
-                            <Button size="sm" variant="outline" onClick={() => updateQuantity(item.id, -1, true)} disabled={item.boxQuantity <= 0}>-</Button>
+                          <div className="flex gap-2 items-center">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updateBoxQuantity(item.id, item.boxQuantity - 1)}
+                              disabled={item.boxQuantity <= 0}
+                            >
+                              -
+                            </Button>
                             <span>{item.boxQuantity}</span>
-                            <Button size="sm" variant="outline" onClick={() => updateQuantity(item.id, 1, true)} disabled={(item.boxQuantity * item.boxCapacity + item.pieceQuantity) >= item.stock}>+</Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updateBoxQuantity(item.id, item.boxQuantity + 1)}
+                              disabled={(item.boxQuantity + 1) * item.boxCapacity > item.stock}
+                            >
+                              +
+                            </Button>
                           </div>
                         </div>
+
+                        {/* Dona */}
                         <div className="flex justify-between">
                           <span>Dona:</span>
-                          <div className="flex gap-2">
-                            <Button size="sm" variant="outline" onClick={() => updateQuantity(item.id, -1)} disabled={item.pieceQuantity <= 0}>-</Button>
+                          <div className="flex gap-2 items-center">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updatePieceQuantity(item.id, item.pieceQuantity - 1)}
+                              disabled={item.pieceQuantity <= 0}
+                            >
+                              -
+                            </Button>
                             <span>{item.pieceQuantity}</span>
-                            <Button size="sm" variant="outline" onClick={() => updateQuantity(item.id, 1)} disabled={(item.boxQuantity * item.boxCapacity + item.pieceQuantity) >= item.stock}>+</Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updatePieceQuantity(item.id, item.pieceQuantity + 1)}
+                              disabled={
+                                item.pieceQuantity + 1 >= item.boxCapacity ||
+                                item.pieceQuantity + 1 > item.stock
+                              }
+                            >
+                              +
+                            </Button>
                           </div>
                         </div>
                       </div>
@@ -161,19 +261,33 @@ export default function Cart() {
           <CardContent className="p-4">
             <h3 className="font-semibold mb-4">Xulosa</h3>
             <div className="space-y-2 mb-4">
-              <div className="flex justify-between"><span>{totalQuantity} dona:</span><span>${totalAmountUSD}</span></div>
-              <div className="flex justify-between"><span>Yetkazib berish:</span><span className="text-green-600">Bepul</span></div>
+              <div className="flex justify-between">
+                <span>{totalQuantity} dona:</span>
+                <span>${totalAmountUSD}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Yetkazib berish:</span>
+                <span className="text-green-600">Bepul</span>
+              </div>
             </div>
             <Separator className="my-4" />
             <div className="flex justify-between text-lg font-bold mb-4">
-              <span>Jami:</span><span className="text-primary">${totalAmountUSD}</span>
+              <span>Jami:</span>
+              <span className="text-primary">${totalAmountUSD}</span>
             </div>
-            <Button onClick={() => setIsPaymentOpen(true)} className="w-full h-12">To'lash</Button>
+            <Button onClick={() => setIsPaymentOpen(true)} className="w-full h-12">
+              To'lash
+            </Button>
           </CardContent>
         </Card>
       )}
 
-      <PaymentModal isOpen={isPaymentOpen} onClose={() => setIsPaymentOpen(false)} cartItems={cartItems} usdRate={usdRate || 12600} />
+      <PaymentModal
+        isOpen={isPaymentOpen}
+        onClose={() => setIsPaymentOpen(false)}
+        cartItems={cartItems}
+        usdRate={usdRate || 12600}
+      />
       <MobileNavigation />
       <Footer />
       <div className="pb-20"></div>
