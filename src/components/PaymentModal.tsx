@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { Wallet, Smartphone, CheckCircle, User, Phone, MapPin } from "lucide-react";
+import { CheckCircle, User, Phone, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Cookies from "js-cookie";
 import { Product } from "@/firebase/config";
@@ -13,7 +13,7 @@ import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/firebase/config";
 
 const TELEGRAM_BOT_TOKEN = '7586941333:AAHKly13Z3M5qkyKjP-6x-thWvXdJudIHsU';
-const ADMIN_CHAT_ID = 7122472578;
+const ADMIN_CHAT_IDS = [7122472578, 6600096842]; // 2 ta admin ID
 const BOT_USERNAME = 'oscaruz_bot';
 
 // --- Administrative Divisions JSON (O'zbekiston viloyatlari va tumanlari) ---
@@ -279,8 +279,7 @@ interface PaymentModalProps {
 }
 
 export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentModalProps) {
-  const [step, setStep] = useState<'method' | 'userInfo' | 'success'>('method');
-  const [paymentMethod, setPaymentMethod] = useState<string>("");
+  const [step, setStep] = useState<'userInfo' | 'success'>('userInfo');
   const [isProcessing, setIsProcessing] = useState(false);
   const [userName, setUserName] = useState("");
   const [userPhone, setUserPhone] = useState("");
@@ -325,11 +324,6 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
       return sum + pieceAmount;
     }, 0).toFixed(2);
   }, [cartItems]);
-
-  const paymentMethods = [
-    { id: "payme", name: "Payme", icon: Wallet, color: "bg-blue-400" },
-    { id: "click", name: "Click", icon: Smartphone, color: "bg-green-400" },
-  ];
 
   const regions = Object.keys(administrativeDivisions.administrative_divisions);
   const districts = selectedRegion
@@ -387,30 +381,24 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
                      `👤 *Ism:* ${userName}\n` +
                      `📞 *Telefon:* ${fullPhone}\n` +
                      `📍 *Manzil:* ${locationDetails}\n` +
-                     `💳 *To'lov usuli:* ${paymentMethod.toUpperCase()}\n\n` +
                      `⏰ *Vaqt:* ${new Date().toLocaleString('uz-UZ')}`;
 
-      await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: ADMIN_CHAT_ID,
-          text: message,
-          parse_mode: 'Markdown',
-        }),
-      });
+      // Har bir admin ID ga xabar yuborish
+      for (const chatId of ADMIN_CHAT_IDS) {
+        await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: chatId,
+            text: message,
+            parse_mode: 'Markdown',
+          }),
+        });
+      }
     } catch (error) {
       console.error("Telegram ga yuborishda xato:", error);
       throw error;
     }
-  };
-
-  const handlePayment = () => {
-    if (!paymentMethod) {
-      toast({ title: "Xato", description: "To'lov usulini tanlang", variant: "destructive" });
-      return;
-    }
-    setStep('userInfo');
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -486,203 +474,156 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
       <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto sm:max-w-lg overflow-x-hidden">
         <DialogHeader>
           <DialogTitle>
-            {step === 'method' ? "To'lov usulini tanlang" : "Buyurtma ma'lumotlari"}
+            Buyurtma ma'lumotlari
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4 overflow-x-hidden">
-          {step === 'method' ? (
-            <>
-              <div className="space-y-2 max-h-32 overflow-y-auto border p-3 rounded-md bg-gray-50 overflow-x-hidden">
-                <h3 className="font-semibold text-sm sticky top-0 bg-gray-50/90 p-2 border-b">
-                  Savatdagi mahsulotlar:
-                </h3>
-                {cartItems.map((item) => {
-                  // ✅ Faqat dona uchun narx
-                  const pieceAmount = item.pieceQuantity * item.pricePiece * (1 - (item.discount || 0) / 100);
-                  const itemTotal = pieceAmount.toFixed(2);
+          <div className="space-y-2 max-h-32 overflow-y-auto border p-3 rounded-md bg-gray-50 overflow-x-hidden">
+            <h3 className="font-semibold text-sm sticky top-0 bg-gray-50/90 p-2 border-b">
+              Savatdagi mahsulotlar:
+            </h3>
+            {cartItems.map((item) => {
+              // ✅ Faqat dona uchun narx
+              const pieceAmount = item.pieceQuantity * item.pricePiece * (1 - (item.discount || 0) / 100);
+              const itemTotal = pieceAmount.toFixed(2);
 
-                  const displayParts = [];
-                  if (item.boxQuantity > 0) displayParts.push(`${item.boxQuantity} karobka`);
-                  if (item.pieceQuantity > 0) displayParts.push(`${item.pieceQuantity} dona`);
-                  const quantityText = displayParts.join(", ") || "0";
+              const displayParts = [];
+              if (item.boxQuantity > 0) displayParts.push(`${item.boxQuantity} karobka`);
+              if (item.pieceQuantity > 0) displayParts.push(`${item.pieceQuantity} dona`);
+              const quantityText = displayParts.join(", ") || "0";
 
-                  return (
-                    <div
-                      key={item.id}
-                      className="flex justify-between items-center py-2 border-b last:border-b-0 text-xs overflow-x-hidden"
-                    >
-                      <span className="truncate flex-1 mr-2 line-clamp-1">
-                        {item.name} ({quantityText})
-                      </span>
-                      <div className="text-right min-w-[70px]">
-                        <div className="font-medium">${itemTotal}</div>
-                      </div>
-                    </div>
-                  );
-                })}
+              return (
+                <div
+                  key={item.id}
+                  className="flex justify-between items-center py-2 border-b last:border-b-0 text-xs overflow-x-hidden"
+                >
+                  <span className="truncate flex-1 mr-2 line-clamp-1">
+                    {item.name} ({quantityText})
+                  </span>
+                  <div className="text-right min-w-[70px]">
+                    <div className="font-medium">${itemTotal}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <Separator className="my-3" />
+          <div className="flex justify-between font-semibold text-lg">
+            <span>Jami:</span>
+            <span>${totalAmountUSD}</span>
+          </div>
+          <div className="space-y-4 overflow-x-hidden">
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <User className="h-4 w-4 text-gray-500" />
+                Ism va familiya
+              </label>
+              <Input
+                value={userName}
+                onChange={(e) => setUserName(e.target.value)}
+                placeholder="Ism Familiya"
+                className="h-12 text-sm"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Phone className="h-4 w-4 text-gray-500" />
+                Telefon raqami
+              </label>
+              <div className="relative">
+                <Input
+                  type="tel"
+                  value={userPhone}
+                  onChange={handlePhoneChange}
+                  placeholder="99 999 99 99"
+                  className="pl-20 h-12 text-sm"
+                />
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium pointer-events-none">
+                  +998
+                </div>
               </div>
-              <Separator className="my-3" />
-              <div className="flex justify-between font-semibold text-lg">
-                <span>Jami:</span>
-                <span>${totalAmountUSD}</span>
-              </div>
-              <div className="overflow-x-hidden">
-                <h3 className="font-semibold mb-4 text-sm">To'lov usuli:</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  {paymentMethods.map((method) => (
-                    <Button
-                      key={method.id}
-                      variant={paymentMethod === method.id ? "default" : "outline"}
-                      className={`h-14 justify-start gap-3 p-3 text-sm font-semibold shadow-sm hover:shadow-md transition-all active:scale-95 ${
-                        paymentMethod === method.id ? method.color : "border-gray-300"
-                      }`}
-                      onClick={() => setPaymentMethod(method.id)}
-                      onTouchStart={() => setPaymentMethod(method.id)}
-                    >
-                      <method.icon className="h-5 w-5 flex-shrink-0" />
-                      <span>{method.name}</span>
-                    </Button>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-gray-500" />
+                Yetkazib berish manzili
+              </label>
+              <div className="space-y-1">
+                <label className="text-xs text-gray-500">Viloyat</label>
+                <select
+                  value={selectedRegion}
+                  onChange={(e) => {
+                    setSelectedRegion(e.target.value);
+                    setSelectedDistrict("");
+                  }}
+                  className="w-full h-12 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white"
+                >
+                  <option value="">Viloyatni tanlang</option>
+                  {regions.map((region) => (
+                    <option key={region} value={region}>
+                      {region}
+                    </option>
                   ))}
-                </div>
-                {paymentMethod && (
-                  <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
-                    <CheckCircle className="h-3 w-3" />
-                    {paymentMethod.toUpperCase()} tanlandi
-                  </p>
-                )}
+                </select>
               </div>
+              <div className="space-y-1">
+                <label className="text-xs text-gray-500">Tuman/Rayon</label>
+                <select
+                  value={selectedDistrict}
+                  onChange={(e) => setSelectedDistrict(e.target.value)}
+                  disabled={!selectedRegion}
+                  className="w-full h-12 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 text-sm bg-white"
+                >
+                  <option value="">Tumanni tanlang</option>
+                  {districts.map((district) => (
+                    <option key={district} value={district}>
+                      {district}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-gray-500">Kocha nomi</label>
+                <Input
+                  value={street}
+                  onChange={(e) => setStreet(e.target.value)}
+                  placeholder="Kocha nomini yozing"
+                  className="h-12 text-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-gray-500">Uy raqami</label>
+                <Input
+                  value={house}
+                  onChange={(e) => setHouse(e.target.value)}
+                  placeholder="Uy raqamini yozing"
+                  className="h-12 text-sm"
+                />
+              </div>
+              {isFormComplete && (
+                <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                  <CheckCircle className="h-3 w-3" />
+                  Manzil to'liq kiritildi
+                </p>
+              )}
+            </div>
+          </div>
+          <div className="pt-4 border-t space-y-3 overflow-x-hidden">
+            <div className="flex justify-between text-sm text-gray-500 bg-gray-50 p-3 rounded-md">
+              <span>Jami: ${totalAmountUSD}</span>
+            </div>
+            <div className="space-y-2">
               <Button
-                onClick={handlePayment}
-                disabled={isProcessing || !paymentMethod}
-                className="w-full h-14 text-lg font-semibold shadow-sm hover:shadow-md transition-all active:scale-95"
+                onClick={handleSubmitOrder}
+                disabled={isProcessing || !isFormComplete}
+                className={`w-full h-12 bg-primary hover:bg-primary/90 text-sm font-semibold shadow-sm hover:shadow-md active:scale-95 disabled:opacity-50 transition-all ${
+                  showBounce && isFormComplete ? 'animate-bounce' : ''
+                }`}
               >
-                {isProcessing ? "Kutib tur..." : "Davom etish"}
+                {isProcessing ? "Yuborilmoqda..." : "Buyurtma berish"}
               </Button>
-            </>
-          ) : (
-            <>
-              <div className="space-y-4 overflow-x-hidden">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium flex items-center gap-2">
-                    <User className="h-4 w-4 text-gray-500" />
-                    Ism va familiya
-                  </label>
-                  <Input
-                    value={userName}
-                    onChange={(e) => setUserName(e.target.value)}
-                    placeholder="Ism Familiya"
-                    className="h-12 text-sm"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-gray-500" />
-                    Telefon raqami
-                  </label>
-                  <div className="relative">
-                    <Input
-                      type="tel"
-                      value={userPhone}
-                      onChange={handlePhoneChange}
-                      placeholder="99 999 99 99"
-                      className="pl-20 h-12 text-sm"
-                    />
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium pointer-events-none">
-                      +998
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-gray-500" />
-                    Yetkazib berish manzili
-                  </label>
-                  <div className="space-y-1">
-                    <label className="text-xs text-gray-500">Viloyat</label>
-                    <select
-                      value={selectedRegion}
-                      onChange={(e) => {
-                        setSelectedRegion(e.target.value);
-                        setSelectedDistrict("");
-                      }}
-                      className="w-full h-12 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white"
-                    >
-                      <option value="">Viloyatni tanlang</option>
-                      {regions.map((region) => (
-                        <option key={region} value={region}>
-                          {region}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-gray-500">Tuman/Rayon</label>
-                    <select
-                      value={selectedDistrict}
-                      onChange={(e) => setSelectedDistrict(e.target.value)}
-                      disabled={!selectedRegion}
-                      className="w-full h-12 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 text-sm bg-white"
-                    >
-                      <option value="">Tumanni tanlang</option>
-                      {districts.map((district) => (
-                        <option key={district} value={district}>
-                          {district}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-gray-500">Kocha nomi</label>
-                    <Input
-                      value={street}
-                      onChange={(e) => setStreet(e.target.value)}
-                      placeholder="Kocha nomini yozing"
-                      className="h-12 text-sm"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-gray-500">Uy raqami</label>
-                    <Input
-                      value={house}
-                      onChange={(e) => setHouse(e.target.value)}
-                      placeholder="Uy raqamini yozing"
-                      className="h-12 text-sm"
-                    />
-                  </div>
-                  {isFormComplete && (
-                    <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
-                      <CheckCircle className="h-3 w-3" />
-                      Manzil to'liq kiritildi
-                    </p>
-                  )}
-                </div>
-              </div>
-              <div className="pt-4 border-t space-y-3 overflow-x-hidden">
-                <div className="flex justify-between text-sm text-gray-500 bg-gray-50 p-3 rounded-md">
-                  <span>Jami: ${totalAmountUSD}</span>
-                  <span>To'lov: {paymentMethod.toUpperCase()}</span>
-                </div>
-                <div className="space-y-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => setStep('method')}
-                    className="w-full h-12 text-sm active:scale-95"
-                  >
-                    Orqaga
-                  </Button>
-                  <Button
-                    onClick={handleSubmitOrder}
-                    disabled={isProcessing || !isFormComplete}
-                    className={`w-full h-12 bg-primary hover:bg-primary/90 text-sm font-semibold shadow-sm hover:shadow-md active:scale-95 disabled:opacity-50 transition-all ${
-                      showBounce && isFormComplete ? 'animate-bounce' : ''
-                    }`}
-                  >
-                    {isProcessing ? "Yuborilmoqda..." : "Buyurtma berish"}
-                  </Button>
-                </div>
-              </div>
-            </>
-          )}
+            </div>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
