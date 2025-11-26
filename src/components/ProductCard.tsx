@@ -1,6 +1,7 @@
+// ProductCard.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Cookies from "js-cookie";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,13 +11,26 @@ import { Product } from "@/firebase/config";
 
 interface ProductCardProps {
   product: Product;
+  fromCategory?: string;
 }
 
-export function ProductCard({ product }: ProductCardProps) {
+export function ProductCard({ product, fromCategory }: ProductCardProps) {
   const [quantity, setQuantity] = useState(0);
+  const [shouldScroll, setShouldScroll] = useState(false);
+
   const navigate = useNavigate();
   const cookieKey = `cart_${product.id}`;
   const isOutOfStock = product.stock === 0;
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const textRef = useRef<HTMLSpanElement>(null);
+
+  // ⭐ Matn sig'adimi sig'maydimi tekshiramiz
+  useEffect(() => {
+    const containerWidth = containerRef.current?.offsetWidth || 0;
+    const textWidth = textRef.current?.scrollWidth || 0;
+    setShouldScroll(textWidth > containerWidth);
+  }, [product.name]);
 
   useEffect(() => {
     const saved = Cookies.get(cookieKey);
@@ -44,36 +58,40 @@ export function ProductCard({ product }: ProductCardProps) {
   }, [quantity, product, cookieKey]);
 
   const handleCardClick = (e: React.MouseEvent) => {
-    if (e.target instanceof HTMLElement && e.target.closest('button')) return;
+    if (e.target instanceof HTMLElement && e.target.closest("button")) return;
     if (!isOutOfStock) {
-      navigate(`/products/${product.id}`);
+      navigate(`/products/${product.id}`, {
+        state: fromCategory ? { fromCategory } : undefined,
+      });
     }
   };
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isOutOfStock) return;
-    if (quantity === 0) {
-      setQuantity(1);
-      navigate(`/products/${product.id}`);
-    } else {
-      navigate(`/products/${product.id}`);
-    }
+    navigate(`/products/${product.id}`, {
+      state: fromCategory ? { fromCategory } : undefined,
+    });
   };
 
   const discountedPrice = product.pricePiece * (1 - product.discount / 100);
-  const originalPrice = product.discount > 0 ? product.pricePiece / (1 - product.discount / 100) : product.pricePiece;
+  const originalPrice =
+    product.discount > 0
+      ? product.pricePiece / (1 - product.discount / 100)
+      : product.pricePiece;
 
-  const formatCurrency = (price: number) => {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(price);
-  };
-
-  const formattedDiscountedPrice = formatCurrency(discountedPrice);
-  const formattedOriginalPrice = formatCurrency(originalPrice);
+  const formatCurrency = (price: number) =>
+    new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 2,
+    }).format(price);
 
   return (
-    <Card 
-      className={`overflow-hidden transition-shadow border rounded-lg cursor-pointer ${isOutOfStock ? 'opacity-50 grayscale' : 'hover:shadow-md'}`} 
+    <Card
+      className={`overflow-hidden transition-shadow border rounded-lg cursor-pointer ${
+        isOutOfStock ? "opacity-50 grayscale" : "hover:shadow-md"
+      }`}
       onClick={handleCardClick}
     >
       <CardContent className="p-3">
@@ -83,30 +101,62 @@ export function ProductCard({ product }: ProductCardProps) {
               -{product.discount}%
             </Badge>
           )}
+
           {isOutOfStock && (
             <Badge className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 text-xs rounded-full">
               Qolmagan
             </Badge>
           )}
-          <img src={product.image} alt={product.name} className="w-full h-36 object-contain mb-3" />
+
+          <img
+            src={product.image}
+            alt={product.name}
+            className="w-full h-36 object-contain mb-3"
+          />
         </div>
+
         <div className="space-y-1">
-          <h3 className="font-semibold text-sm truncate line-clamp-1">{product.name}</h3>
+          {/* ⭐ Product Name (scroll only if overflow) */}
+          <div ref={containerRef} className="overflow-hidden whitespace-nowrap">
+            <span
+              ref={textRef}
+              className={`inline-block font-semibold text-sm ${
+                shouldScroll ? "animate-marquee" : ""
+              }`}
+            >
+              {shouldScroll ? `${product.name} • ${product.name}` : product.name}
+            </span>
+          </div>
+
+          {/* Prices */}
           <div className="flex flex-col">
-            <span className="font-bold text-red-600">{formattedDiscountedPrice}</span>
+            <span className="font-bold text-red-600">
+              {formatCurrency(discountedPrice)}
+            </span>
             {product.discount > 0 && !isOutOfStock && (
               <span className="text-xs text-gray-400 line-through">
-                {formattedOriginalPrice}
+                {formatCurrency(originalPrice)}
               </span>
             )}
           </div>
+
+          {/* Description */}
           {isOutOfStock ? (
-            <p className="text-xs text-red-600 font-medium line-clamp-1">Mahsulot qolmagan</p>
+            <p className="text-xs text-red-600 font-medium line-clamp-1">
+              Mahsulot qolmagan
+            </p>
           ) : (
-            <p className="text-xs text-muted-foreground line-clamp-1">{product.description}</p>
+            <p className="text-xs text-muted-foreground line-clamp-1">
+              {product.description}
+            </p>
           )}
+
+          {/* Button */}
           {isOutOfStock ? (
-            <Button disabled className="w-full mt-2 h-8 text-xs bg-gray-300 text-gray-500 cursor-not-allowed">
+            <Button
+              disabled
+              className="w-full mt-2 h-8 text-xs bg-gray-300 text-gray-500"
+            >
               Qolmagan
             </Button>
           ) : quantity === 0 ? (
@@ -114,7 +164,7 @@ export function ProductCard({ product }: ProductCardProps) {
               onClick={handleAddToCart}
               className="w-full mt-2 h-8 text-xs bg-red-500 hover:bg-red-600 text-white"
             >
-              Savatga qo‘shish
+              Savatga qo'shish
             </Button>
           ) : (
             <Button
