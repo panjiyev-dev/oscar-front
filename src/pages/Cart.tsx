@@ -1,6 +1,6 @@
 "use client";
 
-import "./Cart.css";
+import "@/pages/Cart.css";
 import { useState, useEffect } from "react";
 import Cookies from "js-cookie";
 import { Minus, Plus, Trash2, ShoppingCart } from "lucide-react";

@@ -1,5 +1,5 @@
 "use client";
-import "../index.css";
+import "@/index.css";
 import { useState, useEffect } from "react";
 import { Search, ChevronRight, X } from "lucide-react";
 import { Input } from "@/components/ui/input";

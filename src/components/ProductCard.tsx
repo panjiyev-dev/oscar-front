@@ -1,6 +1,7 @@
 // ProductCard.tsx
 "use client";
 
+import "@/components/ProductCard.css";
 import { useState, useEffect, useRef } from "react";
 import Cookies from "js-cookie";
 import { Badge } from "@/components/ui/badge";

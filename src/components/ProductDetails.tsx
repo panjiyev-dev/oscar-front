@@ -1,6 +1,6 @@
 "use client";
 
-import "./ProductDetails.css";
+import "@/components/ProductDetails.css";
 import { useState, useEffect, useMemo } from "react";
 import { ChevronLeft } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";

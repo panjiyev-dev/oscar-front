@@ -1,7 +1,7 @@
 // Categories.tsx
 "use client";
 
-import "./Categories.css";
+import "@/pages/Categories.css";
 import { useState, useEffect, useMemo } from "react";
 import { ChevronRight, Grid3X3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
