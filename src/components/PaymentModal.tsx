@@ -1,5 +1,4 @@
 "use client";
-
 import { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -13,262 +12,152 @@ import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/firebase/config";
 
 const TELEGRAM_BOT_TOKEN = '7586941333:AAHKly13Z3M5qkyKjP-6x-thWvXdJudIHsU';
-const ADMIN_CHAT_IDS = [7122472578, 6600096842]; // 2 ta admin ID
+const ADMIN_CHAT_IDS = [7122472578, 6600096842];
 const BOT_USERNAME = 'oscaruz_bot';
 
-// --- Administrative Divisions JSON (O'zbekiston viloyatlari va tumanlari) ---
+// ✅ RANGLAR RO'YXATI - backend bilan bir xil
+const AVAILABLE_COLORS = [
+  { id: 'qizil', name: 'Qizil', emoji: '🔴' },
+  { id: 'yashil', name: 'Yashil', emoji: '🟢' },
+  { id: 'kok', name: "Ko'k", emoji: '🔵' },
+  { id: 'sariq', name: 'Sariq', emoji: '🟡' },
+  { id: 'qora', name: 'Qora', emoji: '⚫' },
+  { id: 'oq', name: 'Oq', emoji: '⚪' },
+  { id: 'kulrang', name: 'Kulrang', emoji: '🩶' },
+  { id: 'jigarrang', name: 'Jigarrang', emoji: '🟤' },
+  { id: 'pushti', name: 'Pushti', emoji: '🩷' },
+  { id: 'binafsha', name: 'Binafsha', emoji: '🟣' },
+  { id: 'toq_sariq', name: "To'q sariq", emoji: '🟠' },
+  { id: 'havorang', name: 'Havorang', emoji: '🩵' }
+];
+
 const administrativeDivisions = {
   "administrative_divisions": {
     "Qoraqalpog'iston": {
       "id": "95",
       "districts": [
-        "Amudaryo tumani",
-        "Beruniy tumani",
-        "Chimboy tumani",
-        "Ellikqal'a tumani",
-        "Kegeyli tumani",
-        "Mo'ynoq tumani",
-        "Nukus tumani",
-        "Qanliko'l tumani",
-        "Qo'ng'irot tumani",
-        "Qorao'zak tumani",
-        "Shumanay tumani",
-        "Taxtako'pir tumani",
-        "To'rtko'l tumani",
-        "Xo'jayli tumani",
-        "Taxiatosh tumani",
-        "Bo'zatov tumani"
+        "Amudaryo tumani", "Beruniy tumani", "Chimboy tumani", "Ellikqal'a tumani",
+        "Kegeyli tumani", "Mo'ynoq tumani", "Nukus tumani", "Qanliko'l tumani",
+        "Qo'ng'irot tumani", "Qorao'zak tumani", "Shumanay tumani", "Taxtako'pir tumani",
+        "To'rtko'l tumani", "Xo'jayli tumani", "Taxiatosh tumani", "Bo'zatov tumani"
       ]
     },
     "Xorazm viloyati": {
       "id": "90",
       "districts": [
-        "Bog'ot tumani",
-        "Gurlan tumani",
-        "Xonqa tumani",
-        "Hazorasp tumani",
-        "Xiva tumani",
-        "Qo'shko'pir tumani",
-        "Shovot tumani",
-        "Urganch tumani",
-        "Yangiariq tumani",
-        "Yangibozor tumani",
-        "Tuproqqal'a tumani"
+        "Bog'ot tumani", "Gurlan tumani", "Xonqa tumani", "Hazorasp tumani",
+        "Xiva tumani", "Qo'shko'pir tumani", "Shovot tumani", "Urganch tumani",
+        "Yangiariq tumani", "Yangibozor tumani", "Tuproqqal'a tumani"
       ]
     },
     "Navoiy viloyati": {
       "id": "85",
       "districts": [
-        "Konimex tumani",
-        "Karmana tumani",
-        "Qiziltepa tumani",
-        "Xatirchi tumani",
-        "Navbahor tumani",
-        "Nurota tumani",
-        "Tomdi tumani",
-        "Uchquduq tumani"
+        "Konimex tumani", "Karmana tumani", "Qiziltepa tumani", "Xatirchi tumani",
+        "Navbahor tumani", "Nurota tumani", "Tomdi tumani", "Uchquduq tumani"
       ]
     },
     "Buxoro viloyati": {
       "id": "80",
       "districts": [
-        "Olot tumani",
-        "Buxoro tumani",
-        "G'ijduvon tumani",
-        "Jondor tumani",
-        "Kogon tumani",
-        "Qorako'l tumani",
-        "Qorovulbozor tumani",
-        "Peshku tumani",
-        "Romitan tumani",
-        "Shofirkon tumani",
-        "Vobkent tumani"
+        "Olot tumani", "Buxoro tumani", "G'ijduvon tumani", "Jondor tumani",
+        "Kogon tumani", "Qorako'l tumani", "Qorovulbozor tumani", "Peshku tumani",
+        "Romitan tumani", "Shofirkon tumani", "Vobkent tumani"
       ]
     },
     "Samarqand viloyati": {
       "id": "30",
       "districts": [
-        "Bulung'ur tumani",
-        "Ishtixon tumani",
-        "Jomboy tumani",
-        "Kattaqo'rg'on tumani",
-        "Qo'shrabot tumani",
-        "Narpay tumani",
-        "Nurobod tumani",
-        "Oqdaryo tumani",
-        "Paxtachi tumani",
-        "Payariq tumani",
-        "Pastdarg'om tumani",
-        "Samarqand tumani",
-        "Toyloq tumani",
-        "Urgut tumani"
+        "Bulung'ur tumani", "Ishtixon tumani", "Jomboy tumani", "Kattaqo'rg'on tumani",
+        "Qo'shrabot tumani", "Narpay tumani", "Nurobod tumani", "Oqdaryo tumani",
+        "Paxtachi tumani", "Payariq tumani", "Pastdarg'om tumani", "Samarqand tumani",
+        "Toyloq tumani", "Urgut tumani"
       ]
     },
     "Qashqadaryo viloyati": {
       "id": "70",
       "districts": [
-        "Chiroqchi tumani",
-        "Dehqonobod tumani",
-        "G'uzor tumani",
-        "Qamashi tumani",
-        "Qarshi tumani",
-        "Koson tumani",
-        "Kasbi tumani",
-        "Kitob tumani",
-        "Mirishkor tumani",
-        "Muborak tumani",
-        "Nishon tumani",
-        "Shahrisabz tumani",
-        "Yakkabog' tumani",
-        "Ko'kdala tumani"
+        "Chiroqchi tumani", "Dehqonobod tumani", "G'uzor tumani", "Qamashi tumani",
+        "Qarshi tumani", "Koson tumani", "Kasbi tumani", "Kitob tumani",
+        "Mirishkor tumani", "Muborak tumani", "Nishon tumani", "Shahrisabz tumani",
+        "Yakkabog' tumani", "Ko'kdala tumani"
       ]
     },
     "Surxondaryo viloyati": {
       "id": "75",
       "districts": [
-        "Angor tumani",
-        "Boysun tumani",
-        "Denov tumani",
-        "Jarqo'rg'on tumani",
-        "Qiziriq tumani",
-        "Qumqo'rg'on tumani",
-        "Muzrabot tumani",
-        "Oltinsoy tumani",
-        "Sariosiyo tumani",
-        "Sherobod tumani",
-        "Sho'rchi tumani",
-        "Termiz tumani",
-        "Uzun tumani",
-        "Bandixon tumani"
+        "Angor tumani", "Boysun tumani", "Denov tumani", "Jarqo'rg'on tumani",
+        "Qiziriq tumani", "Qumqo'rg'on tumani", "Muzrabot tumani", "Oltinsoy tumani",
+        "Sariosiyo tumani", "Sherobod tumani", "Sho'rchi tumani", "Termiz tumani",
+        "Uzun tumani", "Bandixon tumani"
       ]
     },
     "Jizzax viloyati": {
       "id": "25",
       "districts": [
-        "Arnasoy tumani",
-        "Baxmal tumani",
-        "Do'stlik tumani",
-        "Forish tumani",
-        "G'allaorol tumani",
-        "Sharof Rashidov tumani",
-        "Mirzacho'l tumani",
-        "Paxtakor tumani",
-        "Yangiobod tumani",
-        "Zomin tumani",
-        "Zafarobod tumani",
-        "Zarbdor tumani"
+        "Arnasoy tumani", "Baxmal tumani", "Do'stlik tumani", "Forish tumani",
+        "G'allaorol tumani", "Sharof Rashidov tumani", "Mirzacho'l tumani", "Paxtakor tumani",
+        "Yangiobod tumani", "Zomin tumani", "Zafarobod tumani", "Zarbdor tumani"
       ]
     },
     "Sirdaryo viloyati": {
       "id": "20",
       "districts": [
-        "Oqoltin tumani",
-        "Boyovut tumani",
-        "Guliston tumani",
-        "Xovos tumani",
-        "Mirzaobod tumani",
-        "Sayxunobod tumani",
-        "Sardoba tumani",
-        "Sirdaryo tumani"
+        "Oqoltin tumani", "Boyovut tumani", "Guliston tumani", "Xovos tumani",
+        "Mirzaobod tumani", "Sayxunobod tumani", "Sardoba tumani", "Sirdaryo tumani"
       ]
     },
     "Toshkent viloyati": {
       "id": "10",
       "districts": [
-        "Bekobod tumani",
-        "Bo'stonliq tumani",
-        "Bo'ka tumani",
-        "Chinoz tumani",
-        "Qibray tumani",
-        "Ohangaron tumani",
-        "Oqqo'rg'on tumani",
-        "Parkent tumani",
-        "Piskent tumani",
-        "Quyi Chirchiq tumani",
-        "O'rta Chirchiq tumani",
-        "Yangiyo'l tumani",
-        "Yuqori Chirchiq tumani",
-        "Zangiota tumani"
+        "Bekobod tumani", "Bo'stonliq tumani", "Bo'ka tumani", "Chinoz tumani",
+        "Qibray tumani", "Ohangaron tumani", "Oqqo'rg'on tumani", "Parkent tumani",
+        "Piskent tumani", "Quyi Chirchiq tumani", "O'rta Chirchiq tumani", "Yangiyo'l tumani",
+        "Yuqori Chirchiq tumani", "Zangiota tumani"
       ]
     },
     "Namangan viloyati": {
       "id": "50",
       "districts": [
-        "Chortoq tumani",
-        "Chust tumani",
-        "Kosonsoy tumani",
-        "Mingbuloq tumani",
-        "Namangan tumani",
-        "Norin tumani",
-        "Pop tumani",
-        "To'raqo'rg'on tumani",
-        "Uchqo'rg'on tumani",
-        "Uychi tumani",
-        "Yangiqo'rg'on tumani"
+        "Chortoq tumani", "Chust tumani", "Kosonsoy tumani", "Mingbuloq tumani",
+        "Namangan tumani", "Norin tumani", "Pop tumani", "To'raqo'rg'on tumani",
+        "Uchqo'rg'on tumani", "Uychi tumani", "Yangiqo'rg'on tumani"
       ]
     },
     "Farg'ona viloyati": {
       "id": "40",
       "districts": [
-        "Oltiariq tumani",
-        "Bag'dod tumani",
-        "Beshariq tumani",
-        "Buvayda tumani",
-        "Dang'ara tumani",
-        "Farg'ona tumani",
-        "Furqat tumani",
-        "Qo'shtepa tumani",
-        "Quva tumani",
-        "Rishton tumani",
-        "So'x tumani",
-        "Toshloq tumani",
-        "Uchko'prik tumani",
-        "O'zbekiston tumani",
-        "Yozyovon tumani"
+        "Oltiariq tumani", "Bag'dod tumani", "Beshariq tumani", "Buvayda tumani",
+        "Dang'ara tumani", "Farg'ona tumani", "Furqat tumani", "Qo'shtepa tumani",
+        "Quva tumani", "Rishton tumani", "So'x tumani", "Toshloq tumani",
+        "Uchko'prik tumani", "O'zbekiston tumani", "Yozyovon tumani"
       ]
     },
     "Andijon viloyati": {
       "id": "60",
       "districts": [
-        "Andijon tumani",
-        "Asaka tumani",
-        "Baliqchi tumani",
-        "Bo'ston tumani",
-        "Buloqboshi tumani",
-        "Izboskan tumani",
-        "Jalaquduq tumani",
-        "Xo'jaobod tumani",
-        "Qo'rg'ontepa tumani",
-        "Marhamat tumani",
-        "Oltinko'l tumani",
-        "Paxtaobod tumani",
-        "Shahrixon tumani",
-        "Ulug'nor tumani"
+        "Andijon tumani", "Asaka tumani", "Baliqchi tumani", "Bo'ston tumani",
+        "Buloqboshi tumani", "Izboskan tumani", "Jalaquduq tumani", "Xo'jaobod tumani",
+        "Qo'rg'ontepa tumani", "Marhamat tumani", "Oltinko'l tumani", "Paxtaobod tumani",
+        "Shahrixon tumani", "Ulug'nor tumani"
       ]
     },
     "Toshkent shahri": {
       "id": "01",
       "districts": [
-        "Bektemir tumani",
-        "Chilonzor tumani",
-        "Yashnobod tumani",
-        "Mirobod tumani",
-        "Mirzo Ulug'bek tumani",
-        "Sergeli tumani",
-        "Shayxontohur tumani",
-        "Olmazor tumani",
-        "Uchtepa tumani",
-        "Yakkasaroy tumani",
-        "Yunusobod tumani",
-        "Yangihayot tumani"
+        "Bektemir tumani", "Chilonzor tumani", "Yashnobod tumani", "Mirobod tumani",
+        "Mirzo Ulug'bek tumani", "Sergeli tumani", "Shayxontohur tumani", "Olmazor tumani",
+        "Uchtepa tumani", "Yakkasaroy tumani", "Yunusobod tumani", "Yangihayot tumani"
       ]
     }
   }
 };
 
+// ✅ CartItem interface - RANG QUSHILDI
 interface CartItem extends Product {
   boxQuantity: number;
   pieceQuantity: number;
+  selectedColor?: string; // MUHIM!
 }
 
 interface PaymentModalProps {
@@ -317,7 +206,6 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
     return () => window.removeEventListener('resize', handleResize);
   }, [step, isFormComplete, isProcessing]);
 
-  // ✅ JAMI SUMMA: FAQAT DONA UCHUN
   const totalAmountUSD = useMemo(() => {
     return cartItems.reduce((sum, item) => {
       const pieceAmount = item.pieceQuantity * item.pricePiece * (1 - (item.discount || 0) / 100);
@@ -341,7 +229,6 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
   const updateStockInFirebase = async () => {
     try {
       for (const item of cartItems) {
-        // Miqdor to'g'ri: karobka ham, dona ham
         const totalPieces = item.boxQuantity * (item.boxCapacity || 1) + item.pieceQuantity;
         const productRef = doc(db, 'products', String(item.id));
         await updateDoc(productRef, {
@@ -354,19 +241,29 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
     }
   };
 
+  // ✅ Rang nomini olish - Agar topilmasa bo'sh string qaytaradi
+  const getColorName = (colorId?: string): string => {
+    if (!colorId) return '';
+    const color = AVAILABLE_COLORS.find(c => c.id === colorId);
+    return color ? `${color.emoji} ${color.name}` : '';
+  };
+
   const sendOrderToAdmin = async () => {
     try {
       const orderItems = cartItems.map((item) => {
-        // ✅ Faqat dona uchun narx
         const pieceAmount = item.pieceQuantity * item.pricePiece * (1 - (item.discount || 0) / 100);
         const itemTotal = pieceAmount.toFixed(2);
-
-        const displayParts = [];
+        
+        const displayParts: string[] = [];
         if (item.boxQuantity > 0) displayParts.push(`${item.boxQuantity} karobka`);
         if (item.pieceQuantity > 0) displayParts.push(`${item.pieceQuantity} dona`);
-        const quantityText = displayParts.length ? displayParts.join(" + ") : "0";
-
-        return `${item.name} (${quantityText}): $${itemTotal}`;
+        const quantityText = displayParts.length > 0 ? displayParts.join(" + ") : "0";
+        
+        // ✅ RANG QISMINI QO'SHISH
+        const colorName = getColorName(item.selectedColor);
+        const colorText = colorName ? ` | Rang: ${colorName}` : '';
+        
+        return `${item.name} (${quantityText}${colorText}): $${itemTotal}`;
       }).join('\n');
 
       const locationDetails = selectedRegion && selectedDistrict
@@ -383,7 +280,6 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
                      `📍 *Manzil:* ${locationDetails}\n` +
                      `⏰ *Vaqt:* ${new Date().toLocaleString('uz-UZ')}`;
 
-      // Har bir admin ID ga xabar yuborish
       for (const chatId of ADMIN_CHAT_IDS) {
         await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
           method: 'POST',
@@ -417,18 +313,25 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
       toast({ title: "Xato", description: "Barcha maydonlarni to'ldiring", variant: "destructive" });
       return;
     }
-
     const rawPhone = userPhone.replace(/\D/g, '');
     if (rawPhone.length !== 9) {
       toast({ title: "Xato", description: "Telefon raqami 9 ta raqamdan iborat bo'lishi kerak", variant: "destructive" });
       return;
     }
-
     setIsProcessing(true);
     setShowBounce(false);
     const generatedOrderId = Date.now().toString();
     setOrderId(generatedOrderId);
-
+    
+    // ✅ DEBUG: Ranglarni console'ga chiqarish
+    console.log("=== BUYURTMA MA'LUMOTLARI ===");
+    cartItems.forEach(item => {
+      console.log(`Mahsulot: ${item.name}`);
+      console.log(`selectedColor: ${item.selectedColor || 'YO\'Q'}`);
+      console.log(`Rang nomi: ${getColorName(item.selectedColor) || 'YO\'Q'}`);
+      console.log('---');
+    });
+    
     try {
       await updateStockInFirebase();
       await sendOrderToAdmin();
@@ -436,6 +339,7 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
       setStep('success');
       toast({ title: "Muvaffaqiyat!", description: "Buyurtmangiz qabul qilindi!" });
     } catch (error) {
+      console.error("Buyurtma yuborishda xato:", error);
       toast({ title: "Xato", description: "Buyurtma berishda muammo!", variant: "destructive" });
     } finally {
       setIsProcessing(false);
@@ -473,45 +377,60 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto sm:max-w-lg overflow-x-hidden">
         <DialogHeader>
-          <DialogTitle>
-            Buyurtma ma'lumotlari
-          </DialogTitle>
+          <DialogTitle>Buyurtma ma'lumotlari</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 overflow-x-hidden">
+          {/* SAVAT RO'YXATI */}
           <div className="space-y-2 max-h-32 overflow-y-auto border p-3 rounded-md bg-gray-50 overflow-x-hidden">
             <h3 className="font-semibold text-sm sticky top-0 bg-gray-50/90 p-2 border-b">
               Savatdagi mahsulotlar:
             </h3>
             {cartItems.map((item) => {
-              // ✅ Faqat dona uchun narx
               const pieceAmount = item.pieceQuantity * item.pricePiece * (1 - (item.discount || 0) / 100);
               const itemTotal = pieceAmount.toFixed(2);
-
-              const displayParts = [];
+              
+              const displayParts: string[] = [];
               if (item.boxQuantity > 0) displayParts.push(`${item.boxQuantity} karobka`);
               if (item.pieceQuantity > 0) displayParts.push(`${item.pieceQuantity} dona`);
               const quantityText = displayParts.join(", ") || "0";
+              
+              // ✅ RANG KO'RSATISH
+              const colorDisplay = getColorName(item.selectedColor);
 
               return (
                 <div
                   key={item.id}
-                  className="flex justify-between items-center py-2 border-b last:border-b-0 text-xs overflow-x-hidden"
+                  className="flex justify-between items-start py-2 border-b last:border-b-0 text-xs overflow-x-hidden gap-2"
                 >
-                  <span className="truncate flex-1 mr-2 line-clamp-1">
-                    {item.name} ({quantityText})
-                  </span>
-                  <div className="text-right min-w-[70px]">
-                    <div className="font-medium">${itemTotal}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="truncate font-medium">
+                      {item.name}
+                    </div>
+                    <div className="text-gray-600 text-[11px] mt-0.5">
+                      {quantityText}
+                    </div>
+                    {colorDisplay && (
+                      <div className="text-blue-600 text-[11px] mt-0.5 font-medium">
+                        {colorDisplay}
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="font-bold">${itemTotal}</div>
                   </div>
                 </div>
               );
             })}
           </div>
+
           <Separator className="my-3" />
+          
           <div className="flex justify-between font-semibold text-lg">
             <span>Jami:</span>
             <span>${totalAmountUSD}</span>
           </div>
+
+          {/* FORMA MAYDONLARI */}
           <div className="space-y-4 overflow-x-hidden">
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center gap-2">
@@ -525,6 +444,7 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
                 className="h-12 text-sm"
               />
             </div>
+
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center gap-2">
                 <Phone className="h-4 w-4 text-gray-500" />
@@ -543,6 +463,7 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
                 </div>
               </div>
             </div>
+
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-gray-500" />
@@ -566,6 +487,7 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
                   ))}
                 </select>
               </div>
+
               <div className="space-y-1">
                 <label className="text-xs text-gray-500">Tuman/Rayon</label>
                 <select
@@ -582,6 +504,7 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
                   ))}
                 </select>
               </div>
+
               <div className="space-y-1">
                 <label className="text-xs text-gray-500">Kocha nomi</label>
                 <Input
@@ -591,6 +514,7 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
                   className="h-12 text-sm"
                 />
               </div>
+
               <div className="space-y-1">
                 <label className="text-xs text-gray-500">Uy raqami</label>
                 <Input
@@ -600,6 +524,7 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
                   className="h-12 text-sm"
                 />
               </div>
+
               {isFormComplete && (
                 <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
                   <CheckCircle className="h-3 w-3" />
@@ -608,6 +533,7 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
               )}
             </div>
           </div>
+
           <div className="pt-4 border-t space-y-3 overflow-x-hidden">
             <div className="flex justify-between text-sm text-gray-500 bg-gray-50 p-3 rounded-md">
               <span>Jami: ${totalAmountUSD}</span>

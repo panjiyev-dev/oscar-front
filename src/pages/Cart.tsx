@@ -15,9 +15,27 @@ import { useUsdRateQuery } from "@/hooks/use-settings";
 import { Product } from "@/firebase/config";
 import Footer from "@/components/Footer";
 
+// ✅ RANGLAR RO'YXATI
+const AVAILABLE_COLORS = [
+  { id: 'qizil', name: 'Qizil', emoji: '🔴' },
+  { id: 'yashil', name: 'Yashil', emoji: '🟢' },
+  { id: 'kok', name: "Ko'k", emoji: '🔵' },
+  { id: 'sariq', name: 'Sariq', emoji: '🟡' },
+  { id: 'qora', name: 'Qora', emoji: '⚫' },
+  { id: 'oq', name: 'Oq', emoji: '⚪' },
+  { id: 'kulrang', name: 'Kulrang', emoji: '🩶' },
+  { id: 'jigarrang', name: 'Jigarrang', emoji: '🟤' },
+  { id: 'pushti', name: 'Pushti', emoji: '🩷' },
+  { id: 'binafsha', name: 'Binafsha', emoji: '🟣' },
+  { id: 'toq_sariq', name: "To'q sariq", emoji: '🟠' },
+  { id: 'havorang', name: 'Havorang', emoji: '🩵' }
+];
+
+// ✅ CartItem interface ga selectedColor qo'shildi
 interface CartItem extends Product {
   boxQuantity: number;
   pieceQuantity: number;
+  selectedColor?: string; // YANGI
 }
 
 // Skeleton komponentlari
@@ -33,7 +51,6 @@ const CartItemSkeleton = () => (
             <div className="skeleton-price h-4 w-12"></div>
             <div className="w-6 h-6 skeleton-button rounded"></div>
           </div>
-          {/* Karobka skeleton */}
           <div className="space-y-2 text-sm">
             <div className="flex justify-between items-center">
               <span className="skeleton-text h-3 w-16"></span>
@@ -43,7 +60,6 @@ const CartItemSkeleton = () => (
                 <div className="w-6 h-6 skeleton-button rounded"></div>
               </div>
             </div>
-            {/* Dona skeleton */}
             <div className="flex justify-between items-center">
               <span className="skeleton-text h-3 w-16"></span>
               <div className="flex gap-2 items-center">
@@ -100,6 +116,14 @@ export default function Cart() {
     }
   }, [productsArray, isLoading]);
 
+  // ✅ Rang nomini olish
+  const getColorName = (colorId?: string): string => {
+    if (!colorId) return '';
+    const color = AVAILABLE_COLORS.find(c => c.id === colorId);
+    return color ? `${color.emoji} ${color.name}` : '';
+  };
+
+  // ✅ Cookie'dan yuklash - selectedColor ham o'qiladi
   const loadCartFromCookies = (allProducts: Product[]) => {
     const cookies = Cookies.get();
     const newCartItems: CartItem[] = [];
@@ -109,10 +133,9 @@ export default function Cart() {
         const productId = parseInt(cookieName.replace("cart_", ""), 10);
         const saved = cookies[cookieName];
         try {
-          const { box = 0, piece = 0 } = JSON.parse(saved);
+          const { box = 0, piece = 0, selectedColor } = JSON.parse(saved);
           const product = allProducts.find((p) => p.id === productId);
           if (product) {
-            // Faqat bittasini saqlash: box yoki piece
             const finalBox = box > 0 ? box : 0;
             const finalPiece = piece > 0 && box === 0 ? piece : 0;
 
@@ -122,9 +145,9 @@ export default function Cart() {
                 ...product,
                 boxQuantity: finalBox,
                 pieceQuantity: finalPiece,
+                selectedColor, // ✅ RANG QO'SHILDI
               });
             } else {
-              // Noto'g'ri qiymat bo'lsa cookie o'chirilsin
               Cookies.remove(cookieName);
             }
           }
@@ -136,6 +159,7 @@ export default function Cart() {
     setCartItems(newCartItems);
   };
 
+  // ✅ updateBoxQuantity - selectedColor saqlanadi
   const updateBoxQuantity = (productId: number, newBox: number) => {
     const item = cartItems.find((item) => item.id === productId);
     if (!item) return;
@@ -152,7 +176,7 @@ export default function Cart() {
       return;
     }
 
-    const data = { box: newBox, piece: 0 };
+    const data = { box: newBox, piece: 0, selectedColor: item.selectedColor }; // ✅ RANG SAQLANADI
     if (newBox > 0) {
       Cookies.set(`cart_${productId}`, JSON.stringify(data), { expires: 7 });
       setCartItems((prev) =>
@@ -168,6 +192,7 @@ export default function Cart() {
     }
   };
 
+  // ✅ updatePieceQuantity - selectedColor saqlanadi
   const updatePieceQuantity = (productId: number, newPiece: number) => {
     const item = cartItems.find((item) => item.id === productId);
     if (!item) return;
@@ -183,7 +208,7 @@ export default function Cart() {
       return;
     }
 
-    const data = { box: 0, piece: newPiece };
+    const data = { box: 0, piece: newPiece, selectedColor: item.selectedColor }; // ✅ RANG SAQLANADI
     if (newPiece > 0) {
       Cookies.set(`cart_${productId}`, JSON.stringify(data), { expires: 7 });
       setCartItems((prev) =>
@@ -210,7 +235,6 @@ export default function Cart() {
     0
   );
 
-  // Karobka narxi doim 0 — faqat dona hisoblanadi
   const totalAmountUSD = cartItems
     .reduce((sum, item) => {
       const pieceAmount = item.pieceQuantity * item.pricePiece * (1 - item.discount / 100);
@@ -241,10 +265,12 @@ export default function Cart() {
         <>
           <div className="space-y-4 mb-8">
             {cartItems.map((item) => {
-              // Faqat dona uchun narx
               const itemTotal = (
                 item.pieceQuantity * item.pricePiece * (1 - item.discount / 100)
               ).toFixed(2);
+
+              // ✅ Rangni olish
+              const colorDisplay = getColorName(item.selectedColor);
 
               return (
                 <Card key={item.id} className="fade-in">
@@ -257,6 +283,14 @@ export default function Cart() {
                       />
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold truncate">{item.name}</h3>
+                        
+                        {/* ✅ RANG KO'RSATISH */}
+                        {colorDisplay && (
+                          <p className="text-xs text-blue-600 font-medium mt-1">
+                            {colorDisplay}
+                          </p>
+                        )}
+                        
                         <p className="text-sm text-gray-600 line-clamp-1 mb-2">
                           Omborda {item.stock} dona
                         </p>
@@ -331,34 +365,32 @@ export default function Cart() {
             })}
           </div>
 
-          <SummarySkeleton />
+          {!isLoadingContent && (
+            <Card className="sticky bottom-24 fade-in">
+              <CardContent className="p-4">
+                <h3 className="font-semibold mb-4">Xulosa</h3>
+                <div className="space-y-2 mb-4">
+                  <div className="flex justify-between">
+                    <span>{totalQuantity} dona:</span>
+                    <span>${totalAmountUSD}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Yetkazib berish:</span>
+                    <span className="text-green-600">Bepul</span>
+                  </div>
+                </div>
+                <Separator className="my-4" />
+                <div className="flex justify-between text-lg font-bold mb-4">
+                  <span>Jami:</span>
+                  <span className="text-primary">${totalAmountUSD}</span>
+                </div>
+                <Button onClick={() => setIsPaymentOpen(true)} className="w-full h-12">
+                  To'lash
+                </Button>
+              </CardContent>
+            </Card>
+          )}
         </>
-      )}
-
-      {cartItems.length > 0 && !isLoadingContent && (
-        <Card className="sticky bottom-24 fade-in">
-          <CardContent className="p-4">
-            <h3 className="font-semibold mb-4">Xulosa</h3>
-            <div className="space-y-2 mb-4">
-              <div className="flex justify-between">
-                <span>{totalQuantity} dona:</span>
-                <span>${totalAmountUSD}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Yetkazib berish:</span>
-                <span className="text-green-600">Bepul</span>
-              </div>
-            </div>
-            <Separator className="my-4" />
-            <div className="flex justify-between text-lg font-bold mb-4">
-              <span>Jami:</span>
-              <span className="text-primary">${totalAmountUSD}</span>
-            </div>
-            <Button onClick={() => setIsPaymentOpen(true)} className="w-full h-12">
-              To'lash
-            </Button>
-          </CardContent>
-        </Card>
       )}
 
       <PaymentModal

@@ -17,6 +17,22 @@ interface ProductDetailsProps {
   productId: number;
 }
 
+// ✅ RANGLAR RO'YXATI - backend bilan bir xil
+const AVAILABLE_COLORS = [
+  { id: 'qizil', name: 'Qizil', emoji: '🔴' },
+  { id: 'yashil', name: 'Yashil', emoji: '🟢' },
+  { id: 'kok', name: "Ko'k", emoji: '🔵' },
+  { id: 'sariq', name: 'Sariq', emoji: '🟡' },
+  { id: 'qora', name: 'Qora', emoji: '⚫' },
+  { id: 'oq', name: 'Oq', emoji: '⚪' },
+  { id: 'kulrang', name: 'Kulrang', emoji: '🔘' },
+  { id: 'jigarrang', name: 'Jigarrang', emoji: '🟤' },
+  { id: 'pushti', name: 'Pushti', emoji: '🩷' },
+  { id: 'binafsha', name: 'Binafsha', emoji: '🟣' },
+  { id: 'toq_sariq', name: "To'q sariq", emoji: '🟠' },
+  { id: 'havorang', name: 'Havorang', emoji: '🩵' }
+];
+
 // Skeleton komponentlari
 const ProductDetailsSkeleton = () => (
   <div className="product-details-skeleton">
@@ -49,13 +65,16 @@ const ProductDetails = ({ productId }: ProductDetailsProps) => {
   const { data: allProducts, isLoading: isLoadingProducts, isError: isErrorProducts } = useProductsQuery();
   const { data: usdRate } = useUsdRateQuery();
 
-  // Global state - har bir mahsulot uchun alohida state
-  const [quantities, setQuantities] = useState<Record<number, { box: number; piece: number }>>({});
+  // ✅ State ga selectedColor qo'shildi
+  const [quantities, setQuantities] = useState<Record<number, { 
+    box: number; 
+    piece: number; 
+    selectedColor?: string 
+  }>>({});
 
   const [isChangingProduct, setIsChangingProduct] = useState(false);
   const [showContent, setShowContent] = useState(false);
 
-  // Cookie key dinamik olish
   const cookieKey = useMemo(() => `cart_${productId}`, [productId]);
 
   const { product, relatedProducts, otherProducts } = useMemo(() => {
@@ -67,36 +86,39 @@ const ProductDetails = ({ productId }: ProductDetailsProps) => {
     return { product: selectedProduct, relatedProducts: related, otherProducts: others };
   }, [allProducts, productId]);
 
-  // Hozirgi mahsulot miqdorlarini olish
   const currentBoxQuantity = quantities[productId]?.box || 0;
   const currentPieceQuantity = quantities[productId]?.piece || 0;
+  const currentSelectedColor = quantities[productId]?.selectedColor;
 
-  // ProductId o'zgarganda reset qilish
+  // ✅ Mahsulot ranglarini olish
+  const productColors = useMemo(() => {
+    if (!product || !product.colors || product.colors.length === 0) return [];
+    return AVAILABLE_COLORS.filter(color => product.colors.includes(color.id));
+  }, [product]);
+
+  const hasColors = productColors.length > 0;
+
   useEffect(() => {
     setIsChangingProduct(true);
     setShowContent(false);
-    
-    // Scroll to top
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-    
-    // Loader animatsiyasi uchun kechikish
     setTimeout(() => {
       setIsChangingProduct(false);
       setShowContent(true);
     }, 300);
   }, [productId]);
 
-  // Cookie dan ma'lumotni yuklash - faqat hozirgi mahsulot uchun
+  // Cookie dan yuklash
   useEffect(() => {
     if (!product || isChangingProduct) return;
     
     const saved = Cookies.get(cookieKey);
     if (saved) {
       try {
-        const { box, piece } = JSON.parse(saved);
+        const { box, piece, selectedColor } = JSON.parse(saved);
         setQuantities(prev => ({
           ...prev,
-          [productId]: { box: box || 0, piece: piece || 0 }
+          [productId]: { box: box || 0, piece: piece || 0, selectedColor }
         }));
       } catch {
         setQuantities(prev => ({
@@ -113,14 +135,14 @@ const ProductDetails = ({ productId }: ProductDetailsProps) => {
     }
   }, [cookieKey, product, isChangingProduct, productId]);
 
-  // Cookie ga saqlash - faqat hozirgi mahsulot uchun
+  // Cookie ga saqlash
   useEffect(() => {
     if (!product || isChangingProduct) return;
 
     const currentProductQuantities = quantities[productId];
     if (!currentProductQuantities) return;
 
-    const { box, piece } = currentProductQuantities;
+    const { box, piece, selectedColor } = currentProductQuantities;
     const totalPieces = box * product.boxCapacity + piece;
     
     if (totalPieces > product.stock) {
@@ -133,20 +155,18 @@ const ProductDetails = ({ productId }: ProductDetailsProps) => {
     }
 
     if (box > 0 || piece > 0) {
-      Cookies.set(cookieKey, JSON.stringify({ box, piece }), { expires: 7 });
+      Cookies.set(cookieKey, JSON.stringify({ box, piece, selectedColor }), { expires: 7 });
     } else {
       Cookies.remove(cookieKey);
     }
   }, [quantities, productId, product, cookieKey, toast, isChangingProduct]);
 
-  // Jami summa hisoblash
   const totalAmountUSD = useMemo(() => {
     if (!product) return "0.00";
     const currentProductQuantities = quantities[productId];
     if (!currentProductQuantities) return "0.00";
     
     const { piece } = currentProductQuantities;
-    // Faqat dona narxi hisoblanadi (box 0 narxda)
     const pieceAmount = piece * product.pricePiece * (1 - product.discount / 100);
     return pieceAmount.toFixed(2);
   }, [quantities, productId, product]);
@@ -159,8 +179,24 @@ const ProductDetails = ({ productId }: ProductDetailsProps) => {
     return box * (product?.boxCapacity || 1) + piece;
   }, [quantities, productId, product]);
 
+  // ✅ Rang tanlash handleri
+  const handleColorSelect = (colorId: string) => {
+    setQuantities(prev => ({
+      ...prev,
+      [productId]: {
+        ...prev[productId],
+        selectedColor: colorId,
+        box: prev[productId]?.box || 0,
+        piece: prev[productId]?.piece || 0
+      }
+    }));
+  };
+
+  // ✅ Tugmalar faqat rang tanlanganda yoki ranglar bo'lmasa faol
+  const canInteract = !hasColors || !!currentSelectedColor;
+
   const handleBoxIncrement = () => {
-    if (!product) return;
+    if (!product || !canInteract) return;
     
     const currentBox = quantities[productId]?.box || 0;
     const currentPiece = quantities[productId]?.piece || 0;
@@ -186,6 +222,7 @@ const ProductDetails = ({ productId }: ProductDetailsProps) => {
   };
 
   const handleBoxDecrement = () => {
+    if (!canInteract) return;
     const currentBox = quantities[productId]?.box || 0;
     if (currentBox > 0) {
       setQuantities(prev => ({
@@ -199,7 +236,7 @@ const ProductDetails = ({ productId }: ProductDetailsProps) => {
   };
 
   const handlePieceIncrement = () => {
-    if (!product) return;
+    if (!product || !canInteract) return;
     
     const currentBox = quantities[productId]?.box || 0;
     const currentPiece = quantities[productId]?.piece || 0;
@@ -214,7 +251,6 @@ const ProductDetails = ({ productId }: ProductDetailsProps) => {
       return;
     }
     
-    // Dona karobkadan kam bo'lishi shart
     if (currentPiece >= product.boxCapacity - 1) {
       toast({ 
         title: "Ogohlantirish", 
@@ -235,6 +271,7 @@ const ProductDetails = ({ productId }: ProductDetailsProps) => {
   };
 
   const handlePieceDecrement = () => {
+    if (!canInteract) return;
     const currentPiece = quantities[productId]?.piece || 0;
     if (currentPiece > 0) {
       setQuantities(prev => ({
@@ -248,7 +285,6 @@ const ProductDetails = ({ productId }: ProductDetailsProps) => {
   };
 
   const handleRelatedProductClick = (id: number) => {
-    // State orqali kategoriyani uzatish
     const state = location.state?.fromCategory 
       ? { fromCategory: location.state.fromCategory } 
       : undefined;
@@ -256,7 +292,6 @@ const ProductDetails = ({ productId }: ProductDetailsProps) => {
   };
 
   const handleBack = () => {
-    // Agar kategoriyadan kelgan bo'lsa, o'sha kategoriyaga qaytadi
     if (location.state?.fromCategory) {
       navigate(`/categories?category=${encodeURIComponent(location.state.fromCategory)}`);
     } else {
@@ -345,6 +380,37 @@ const ProductDetails = ({ productId }: ProductDetailsProps) => {
                       </p>
                     </div>
 
+                    {/* ✅ RANGLAR QISMI */}
+                    {hasColors && (
+                      <div className="space-y-2 border-t pt-4">
+                        <span className="font-medium block mb-2">🎨 Rangni tanlang:</span>
+                        <div className="flex flex-wrap gap-2">
+                          {productColors.map((color) => (
+                            <button
+                              key={color.id}
+                              onClick={() => handleColorSelect(color.id)}
+                              className={`px-3 py-2 rounded-lg border-2 transition-all flex items-center gap-2 ${
+                                currentSelectedColor === color.id
+                                  ? 'border-blue-500 bg-blue-50 shadow-md'
+                                  : 'border-gray-300 hover:border-gray-400'
+                              }`}
+                            >
+                              <span className="text-xl">{color.emoji}</span>
+                              <span className="text-sm font-medium">{color.name}</span>
+                              {currentSelectedColor === color.id && (
+                                <span className="text-blue-500">✓</span>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                        {!currentSelectedColor && (
+                          <p className="text-sm text-amber-600 mt-2">
+                            ⚠️ Iltimos, avval rangni tanlang
+                          </p>
+                        )}
+                      </div>
+                    )}
+
                     <div className="space-y-4">
                       {/* Karobka */}
                       <div className="flex items-center justify-between">
@@ -354,7 +420,7 @@ const ProductDetails = ({ productId }: ProductDetailsProps) => {
                             variant="outline"
                             size="sm"
                             onClick={handleBoxDecrement}
-                            disabled={currentBoxQuantity <= 0}
+                            disabled={!canInteract || currentBoxQuantity <= 0}
                           >
                             -
                           </Button>
@@ -363,7 +429,7 @@ const ProductDetails = ({ productId }: ProductDetailsProps) => {
                             variant="outline"
                             size="sm"
                             onClick={handleBoxIncrement}
-                            disabled={totalPieces >= product!.stock}
+                            disabled={!canInteract || totalPieces >= product!.stock}
                           >
                             +
                           </Button>
@@ -378,7 +444,7 @@ const ProductDetails = ({ productId }: ProductDetailsProps) => {
                             variant="outline"
                             size="sm"
                             onClick={handlePieceDecrement}
-                            disabled={currentPieceQuantity <= 0}
+                            disabled={!canInteract || currentPieceQuantity <= 0}
                           >
                             -
                           </Button>
@@ -388,6 +454,7 @@ const ProductDetails = ({ productId }: ProductDetailsProps) => {
                             size="sm"
                             onClick={handlePieceIncrement}
                             disabled={
+                              !canInteract ||
                               currentPieceQuantity >= product!.boxCapacity - 1 || 
                               totalPieces >= product!.stock
                             }
