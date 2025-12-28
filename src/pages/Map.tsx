@@ -77,7 +77,7 @@ export default function Profile() {
           )}
         </Card>
         {/* Yordam va Qo'llab-quvvatlash Card */}
-        <Card className="cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => window.open("https://t.me/s_panjiyev", "_blank")}>
+        <Card className="cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => window.open("https://t.me/Oscar_Manager1", "_blank")}>
           <CardContent className="p-4 flex items-center gap-4">
             <Settings className="h-6 w-6 text-primary" />
             <span className="text-lg font-bold">Yordam va qo'llab-quvvatlash</span>

@@ -13,7 +13,7 @@ import { db } from "@/firebase/config";
 
 const TELEGRAM_BOT_TOKEN = '7586941333:AAHKly13Z3M5qkyKjP-6x-thWvXdJudIHsU';
 const ADMIN_CHAT_IDS = [7122472578, 6600096842];
-const BOT_USERNAME = 'oscaruz_bot';
+const BOT_USERNAME = 'oscar_uzbot';
 
 // ✅ RANGLAR RO'YXATI - backend bilan bir xil
 const AVAILABLE_COLORS = [
@@ -157,7 +157,7 @@ const administrativeDivisions = {
 interface CartItem extends Product {
   boxQuantity: number;
   pieceQuantity: number;
-  selectedColor?: string; // MUHIM!
+  selectedColor?: string;
 }
 
 interface PaymentModalProps {
@@ -241,7 +241,6 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
     }
   };
 
-  // ✅ Rang nomini olish - Agar topilmasa bo'sh string qaytaradi
   const getColorName = (colorId?: string): string => {
     if (!colorId) return '';
     const color = AVAILABLE_COLORS.find(c => c.id === colorId);
@@ -259,7 +258,6 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
         if (item.pieceQuantity > 0) displayParts.push(`${item.pieceQuantity} dona`);
         const quantityText = displayParts.length > 0 ? displayParts.join(" + ") : "0";
         
-        // ✅ RANG QISMINI QO'SHISH
         const colorName = getColorName(item.selectedColor);
         const colorText = colorName ? ` | Rang: ${colorName}` : '';
         
@@ -323,15 +321,6 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
     const generatedOrderId = Date.now().toString();
     setOrderId(generatedOrderId);
     
-    // ✅ DEBUG: Ranglarni console'ga chiqarish
-    console.log("=== BUYURTMA MA'LUMOTLARI ===");
-    cartItems.forEach(item => {
-      console.log(`Mahsulot: ${item.name}`);
-      console.log(`selectedColor: ${item.selectedColor || 'YO\'Q'}`);
-      console.log(`Rang nomi: ${getColorName(item.selectedColor) || 'YO\'Q'}`);
-      console.log('---');
-    });
-    
     try {
       await updateStockInFirebase();
       await sendOrderToAdmin();
@@ -346,9 +335,25 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
     }
   };
 
+  // ✅ TUZATILGAN: Telegram Mini App uchun to'g'ri navigate
   const handlePayNow = () => {
-    if (orderId) {
-      window.open(`https://t.me/${BOT_USERNAME}?start=pay_${orderId}`, '_blank');
+    if (!orderId) return;
+    
+    const paymentUrl = `https://t.me/${BOT_USERNAME}?start=pay_${orderId}`;
+    
+    // Telegram WebApp API mavjudligini tekshirish
+    if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
+      try {
+        // Telegram Mini App ichida - WebApp API dan foydalanish
+        window.Telegram.WebApp.openTelegramLink(paymentUrl);
+      } catch (error) {
+        console.error("Telegram WebApp xatosi:", error);
+        // Fallback: oddiy location.href
+        window.location.href = paymentUrl;
+      }
+    } else {
+      // Oddiy brauzerda - location.href
+      window.location.href = paymentUrl;
     }
   };
 
@@ -380,7 +385,6 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
           <DialogTitle>Buyurtma ma'lumotlari</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 overflow-x-hidden">
-          {/* SAVAT RO'YXATI */}
           <div className="space-y-2 max-h-32 overflow-y-auto border p-3 rounded-md bg-gray-50 overflow-x-hidden">
             <h3 className="font-semibold text-sm sticky top-0 bg-gray-50/90 p-2 border-b">
               Savatdagi mahsulotlar:
@@ -394,7 +398,6 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
               if (item.pieceQuantity > 0) displayParts.push(`${item.pieceQuantity} dona`);
               const quantityText = displayParts.join(", ") || "0";
               
-              // ✅ RANG KO'RSATISH
               const colorDisplay = getColorName(item.selectedColor);
 
               return (
@@ -430,7 +433,6 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
             <span>${totalAmountUSD}</span>
           </div>
 
-          {/* FORMA MAYDONLARI */}
           <div className="space-y-4 overflow-x-hidden">
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center gap-2">
@@ -554,4 +556,18 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
       </DialogContent>
     </Dialog>
   );
+}
+
+// ✅ TELEGRAM WEBAPP TYPE DECLARATION
+declare global {
+  interface Window {
+    Telegram?: {
+      WebApp: {
+        openTelegramLink: (url: string) => void;
+        openLink: (url: string) => void;
+        close: () => void;
+        ready: () => void;
+      };
+    };
+  }
 }
