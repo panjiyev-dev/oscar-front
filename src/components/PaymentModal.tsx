@@ -336,27 +336,49 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
   };
 
   // ✅ TUZATILGAN: Telegram Mini App uchun to'g'ri navigate
+  // const handlePayNow = () => {
+  //   if (!orderId) return;
+    
+  //   const paymentUrl = `https://t.me/${BOT_USERNAME}?start=pay_${orderId}`;
+    
+  //   // Telegram WebApp API mavjudligini tekshirish
+  //   if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
+  //     try {
+  //       // Telegram Mini App ichida - WebApp API dan foydalanish
+  //       window.Telegram.WebApp.openTelegramLink(paymentUrl);
+  //     } catch (error) {
+  //       console.error("Telegram WebApp xatosi:", error);
+  //       // Fallback: oddiy location.href
+  //       window.location.href = paymentUrl;
+  //     }
+  //   } else {
+  //     // Oddiy brauzerda - location.href
+  //     window.location.href = paymentUrl;
+  //   }
+  // };
   const handlePayNow = () => {
     if (!orderId) return;
-    
+  
     const paymentUrl = `https://t.me/${BOT_USERNAME}?start=pay_${orderId}`;
-    
-    // Telegram WebApp API mavjudligini tekshirish
+  
     if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
       try {
-        // Telegram Mini App ichida - WebApp API dan foydalanish
         window.Telegram.WebApp.openTelegramLink(paymentUrl);
-      } catch (error) {
-        console.error("Telegram WebApp xatosi:", error);
-        // Fallback: oddiy location.href
-        window.location.href = paymentUrl;
+      } catch (err1) {
+        try {
+          // openTelegramLink ishlamasa, openLink urinib ko'ramiz
+          window.Telegram.WebApp.openLink(paymentUrl);
+        } catch (err2) {
+          console.error("Both openTelegramLink and openLink failed:", err1, err2);
+          // Agar hammasi ishlamasa, brauzerda ochishga harakat qilamiz (ehtimoliy)
+          window.open(paymentUrl, '_blank');
+        }
       }
     } else {
-      // Oddiy brauzerda - location.href
+      // Oddiy brauzer
       window.location.href = paymentUrl;
     }
   };
-
   if (step === 'success') {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
