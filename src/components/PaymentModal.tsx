@@ -362,20 +362,20 @@ export function PaymentModal({ isOpen, onClose, cartItems, usdRate }: PaymentMod
     const paymentUrl = `https://t.me/${BOT_USERNAME}?start=pay_${orderId}`;
   
     if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
-      try {
-        window.Telegram.WebApp.openTelegramLink(paymentUrl);
-      } catch (err1) {
+      // 1. Mini Appni yopamiz
+      window.Telegram.WebApp.close();
+  
+      // 2. Bir oz kechiktirib (yopilishni kafolatlash uchun), botga yo'naltiramiz
+      setTimeout(() => {
         try {
-          // openTelegramLink ishlamasa, openLink urinib ko'ramiz
+          window.Telegram.WebApp.openTelegramLink(paymentUrl);
+        } catch (e) {
+          // Agar openTelegramLink ishlamasa, oddiy openLink
           window.Telegram.WebApp.openLink(paymentUrl);
-        } catch (err2) {
-          console.error("Both openTelegramLink and openLink failed:", err1, err2);
-          // Agar hammasi ishlamasa, brauzerda ochishga harakat qilamiz (ehtimoliy)
-          window.open(paymentUrl, '_blank');
         }
-      }
+      }, 300); // 300 ms — yopilish uchun yetarli
     } else {
-      // Oddiy brauzer
+      // Oddiy brauzer — redirect
       window.location.href = paymentUrl;
     }
   };
